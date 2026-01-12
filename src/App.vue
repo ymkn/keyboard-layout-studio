@@ -169,7 +169,7 @@ import { useKeyboardStore } from './stores/keyboard'
 import type { KeyboardLayout } from './types/keyboard'
 
 // アプリケーションバージョン
-const appVersion = '0.0.1'
+const appVersion = '0.1.0'
 
 // LocalStorage保存用の型定義
 interface SavedLayout {

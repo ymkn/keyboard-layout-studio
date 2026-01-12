@@ -169,10 +169,80 @@ function convertToVialLayout(keys: Key[]) {
 }
 
 /**
+ * QMK keymap.c形式にエクスポート
+ */
+export function exportToQMKKeymapC(layout: KeyboardLayout): string {
+  // マトリクス情報が設定されているキーのみを対象
+  const keysWithMatrix = layout.keys.filter(
+    k => k.matrix.row !== undefined && k.matrix.col !== undefined
+  )
+
+  if (keysWithMatrix.length === 0) {
+    throw new Error('マトリクス情報が設定されているキーがありません')
+  }
+
+  // キーを物理的な位置（y座標→x座標）の順序でソート
+  // LAYOUTマクロはkeyboard.jsonの物理配置順序に従う
+  const sortedKeys = [...keysWithMatrix].sort((a, b) => {
+    if (a.y !== b.y) {
+      return a.y - b.y
+    }
+    return a.x - b.x
+  })
+
+  // 各レイヤーのkeymap配列を生成
+  const layers: string[] = []
+  for (let layer = 0; layer < layout.layerCount; layer++) {
+    const keycodes = sortedKeys.map(key => {
+      // キーのkeycodes配列からレイヤーのキーコードを取得
+      const keycode = key.keycodes?.[layer]
+      // キーコードが設定されていない場合はKC_TRNSを使用
+      return keycode || 'KC_TRNS'
+    })
+
+    // LAYOUTマクロの引数として整形（12個ごとに改行）
+    const lines: string[] = []
+    for (let i = 0; i < keycodes.length; i += 12) {
+      const chunk = keycodes.slice(i, i + 12)
+      lines.push('\t\t' + chunk.join(', ') + (i + 12 < keycodes.length ? ',' : ''))
+    }
+
+    const layerContent = `\t[${layer}] = LAYOUT(\n${lines.join('\n')}\n\t)`
+    layers.push(layerContent)
+  }
+
+  // keymap.cファイルを生成
+  const content = `/* SPDX-License-Identifier: GPL-2.0-or-later */
+#include QMK_KEYBOARD_H
+
+const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
+${layers.join(',\n')}
+};
+`
+
+  return content
+}
+
+/**
  * JSONデータをファイルとしてダウンロード
  */
 export function downloadJSON(content: string, filename: string) {
   const blob = new Blob([content], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+/**
+ * テキストデータをファイルとしてダウンロード
+ */
+export function downloadText(content: string, filename: string) {
+  const blob = new Blob([content], { type: 'text/plain' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url

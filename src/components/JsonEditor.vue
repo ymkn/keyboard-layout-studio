@@ -130,6 +130,12 @@
               >
                 Vial vial.json としてエクスポート
               </button>
+              <button
+                @click="handleExportKeymapC"
+                class="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded font-medium transition-colors"
+              >
+                QMK keymap.c としてエクスポート
+              </button>
             </div>
           </div>
         </div>
@@ -142,7 +148,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useKeyboardStore } from '../stores/keyboard'
 import type { KeyboardLayout } from '../types/keyboard'
-import { exportToQMK, exportToVial, downloadJSON } from '../utils/export'
+import { exportToQMK, exportToVial, exportToQMKKeymapC, downloadJSON, downloadText } from '../utils/export'
 import { parseKLEJson } from '../utils/kle-import'
 import defaultLayout from '../templates/default-layout.json'
 
@@ -335,6 +341,18 @@ function handleExportVial() {
   } catch (error) {
     console.error('Vialエクスポートエラー:', error)
     alert('Vialエクスポート中にエラーが発生しました')
+  }
+}
+
+function handleExportKeymapC() {
+  try {
+    const keymapC = exportToQMKKeymapC(store.layout)
+    const filename = 'keymap.c'
+    downloadText(keymapC, filename)
+  } catch (error) {
+    console.error('keymap.cエクスポートエラー:', error)
+    const errorMessage = error instanceof Error ? error.message : 'keymap.cエクスポート中にエラーが発生しました'
+    alert(errorMessage)
   }
 }
 </script>
