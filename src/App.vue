@@ -2,7 +2,7 @@
   <div class="h-screen flex flex-col bg-gray-900">
     <header class="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <h1 class="text-xl font-bold text-white">Keyboard Layout Studio</h1>
+        <img src="/kls-logo.png" alt="Keyboard Layout Studio" class="h-8 object-contain" />
         <button
           @click="showAboutDialog = true"
           class="text-xs text-gray-400 hover:text-gray-300 transition-colors cursor-pointer"

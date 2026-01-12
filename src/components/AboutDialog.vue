@@ -6,13 +6,8 @@
   >
     <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-gray-700">
       <div class="flex flex-col items-center gap-4">
-        <!-- アイコン枠（未実装） -->
-        <div class="w-24 h-24 bg-gray-700 rounded-lg border-2 border-gray-600 flex items-center justify-center">
-          <span class="text-gray-500 text-sm">アイコン</span>
-        </div>
-
-        <!-- タイトル -->
-        <h2 class="text-2xl font-bold text-white">Keyboard Layout Studio</h2>
+        <!-- ロゴ -->
+        <img src="/kls-logo.png" alt="Keyboard Layout Studio" class="h-24 max-w-full object-contain" />
 
         <!-- バージョン -->
         <div class="text-gray-300">

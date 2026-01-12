@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./kls-logo.png" alt="Keyboard Layout Studio Logo" width="200">
+</p>
+
 # Keyboard Layout Studio
 
 A modern, web-based keyboard layout editor designed as an alternative to keyboard-layout-editor.com, with a focus on features specifically useful for keyboard developers.
