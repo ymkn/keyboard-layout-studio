@@ -231,8 +231,8 @@ import type { PresetInfo } from './services/presets'
 import type { KeyboardLayout } from './types/keyboard'
 import type { SavedLayoutItem } from './types/github'
 
-// アプリケーションバージョン
-const appVersion = '0.2.0'
+// アプリケーションバージョン（package.jsonから自動取得）
+const appVersion = __APP_VERSION__
 
 const store = useKeyboardStore()
 

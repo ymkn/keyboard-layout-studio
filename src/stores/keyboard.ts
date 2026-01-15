@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Key, KeyboardLayout } from '../types/keyboard'
+import type { Key, KeyboardLayout, LegendFont } from '../types/keyboard'
 import type { StorageSource, GitHubAuth } from '../types/github'
 import { getPresets } from '../services/presets'
 
@@ -75,6 +75,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     return {
       name: layout.name,
       layerCount: layout.layerCount,
+      legendFont: layout.legendFont,
       keys: layout.keys.map(key => ({
         ...key,
         legend: { ...key.legend },
@@ -369,6 +370,15 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     saveHistory()
   }
 
+  function setLegendFont(font: LegendFont | undefined) {
+    layout.value.legendFont = font
+    if (!layout.value.metadata) {
+      layout.value.metadata = {}
+    }
+    layout.value.metadata.modified = new Date().toISOString()
+    saveHistory()
+  }
+
   function setCurrentLayer(layer: number) {
     // 範囲チェック
     if (layer >= 0 && layer < layout.value.layerCount) {
@@ -554,6 +564,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     copySelectedKeys,
     pasteKeys,
     updateMetadata,
+    setLegendFont,
     setCurrentLayer,
     incrementLayerCount,
     decrementLayerCount,

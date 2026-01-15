@@ -45,12 +45,31 @@ export interface Key {
 }
 
 /**
+ * レジェンドフォントの定義
+ */
+export type LegendFont =
+  // ゴシック系
+  | 'Noto Sans JP'
+  | 'M PLUS 1p'
+  | 'M PLUS 2'
+  | 'Zen Kaku Gothic New'
+  // 丸ゴシック系
+  | 'M PLUS Rounded 1c'
+  | 'Zen Maru Gothic'
+  | 'Kosugi Maru'
+  // 明朝系
+  | 'Noto Serif JP'
+  | 'Zen Old Mincho'
+  | 'Shippori Mincho'
+
+/**
  * キーボードレイアウト全体の定義
  */
 export interface KeyboardLayout {
   name: string
   keys: Key[]
   layerCount: number // レイヤー総数（1-16）
+  legendFont?: LegendFont // レジェンドのフォント
   metadata?: {
     author?: string
     description?: string

@@ -44,6 +44,41 @@
           ></textarea>
         </div>
 
+        <!-- レジェンドフォント -->
+        <div class="property-section">
+          <h3 class="text-sm font-semibold text-gray-300 mb-2">レジェンドフォント</h3>
+          <select
+            :value="store.layout.legendFont || ''"
+            @change="updateLegendFont"
+            class="w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none text-sm"
+          >
+            <option value="">デフォルト</option>
+            <optgroup label="ゴシック系">
+              <option value="Noto Sans JP">Noto Sans JP</option>
+              <option value="M PLUS 1p">M PLUS 1p</option>
+              <option value="M PLUS 2">M PLUS 2</option>
+              <option value="Zen Kaku Gothic New">Zen Kaku Gothic New</option>
+            </optgroup>
+            <optgroup label="丸ゴシック系">
+              <option value="M PLUS Rounded 1c">M PLUS Rounded 1c</option>
+              <option value="Zen Maru Gothic">Zen Maru Gothic</option>
+              <option value="Kosugi Maru">Kosugi Maru</option>
+            </optgroup>
+            <optgroup label="明朝系">
+              <option value="Noto Serif JP">Noto Serif JP</option>
+              <option value="Zen Old Mincho">Zen Old Mincho</option>
+              <option value="Shippori Mincho">Shippori Mincho</option>
+            </optgroup>
+          </select>
+          <p
+            v-if="store.layout.legendFont"
+            class="mt-2 text-xs text-gray-400"
+            :style="{ fontFamily: `'${store.layout.legendFont}', sans-serif` }"
+          >
+            プレビュー: あいうえお ABCDE 12345
+          </p>
+        </div>
+
         <!-- 追加情報 -->
         <div class="property-section">
           <h3 class="text-sm font-semibold text-gray-300 mb-2">追加情報</h3>
@@ -208,6 +243,7 @@
               @keydown.enter="handleEnterKey('topLeft')"
               placeholder="左上"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
+              :style="legendFontStyle"
             />
             <input
               :ref="(el) => setInputRef(el, 'topCenter')"
@@ -217,6 +253,7 @@
               @keydown.enter="handleEnterKey('topCenter')"
               placeholder="中上"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
+              :style="legendFontStyle"
             />
             <input
               :ref="(el) => setInputRef(el, 'topRight')"
@@ -226,6 +263,7 @@
               @keydown.enter="handleEnterKey('topRight')"
               placeholder="右上"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
+              :style="legendFontStyle"
             />
           </div>
 
@@ -239,6 +277,7 @@
               @keydown.enter="handleEnterKey('centerLeft')"
               placeholder="左中"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
+              :style="legendFontStyle"
             />
             <input
               :ref="(el) => setInputRef(el, 'center')"
@@ -248,6 +287,7 @@
               @keydown.enter="handleEnterKey('center')"
               placeholder="中央"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs font-semibold"
+              :style="legendFontStyle"
             />
             <input
               :ref="(el) => setInputRef(el, 'centerRight')"
@@ -257,6 +297,7 @@
               @keydown.enter="handleEnterKey('centerRight')"
               placeholder="右中"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
+              :style="legendFontStyle"
             />
           </div>
 
@@ -270,6 +311,7 @@
               @keydown.enter="handleEnterKey('bottomLeft')"
               placeholder="左下"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
+              :style="legendFontStyle"
             />
             <input
               :ref="(el) => setInputRef(el, 'bottomCenter')"
@@ -279,6 +321,7 @@
               @keydown.enter="handleEnterKey('bottomCenter')"
               placeholder="中下"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
+              :style="legendFontStyle"
             />
             <input
               :ref="(el) => setInputRef(el, 'bottomRight')"
@@ -288,6 +331,7 @@
               @keydown.enter="handleEnterKey('bottomRight')"
               placeholder="右下"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
+              :style="legendFontStyle"
             />
           </div>
         </div>
@@ -366,7 +410,7 @@ import { ref, computed, nextTick, watch, onMounted } from 'vue'
 import { useKeyboardStore } from '../stores/keyboard'
 import { getKeycodeLabel } from '../data/keycodes'
 import { SHAPE_PRESETS } from '../data/shape-presets'
-import type { KeyShape } from '../types/keyboard'
+import type { KeyShape, LegendFont } from '../types/keyboard'
 import KeycodePickerDialog from './KeycodePickerDialog.vue'
 
 // Propsの定義
@@ -390,6 +434,12 @@ const isShapeResizable = computed(() => {
   if (!store.selectedKey) return true
   const shape = store.selectedKey.shape || 'rectangle'
   return SHAPE_PRESETS[shape].isResizable
+})
+
+// レジェンドフォントスタイル
+const legendFontStyle = computed(() => {
+  const font = store.layout.legendFont || 'Noto Sans JP'
+  return { fontFamily: `'${font}', sans-serif` }
 })
 
 // キーの幅別内訳を計算
@@ -734,6 +784,11 @@ function updateAuthor() {
 
 function updateDescription() {
   store.updateMetadata({ description: description.value })
+}
+
+function updateLegendFont(event: Event) {
+  const value = (event.target as HTMLSelectElement).value
+  store.setLegendFont(value ? value as LegendFont : undefined)
 }
 
 function formatDate(dateString?: string): string {

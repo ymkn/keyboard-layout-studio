@@ -78,6 +78,15 @@
 
       <div class="flex-1"></div>
 
+      <!-- 撮影モードボタン -->
+      <button
+        @click="showScreenshotDialog = true"
+        class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors text-sm"
+        title="撮影モード"
+      >
+        <i class="fa-solid fa-camera"></i>
+      </button>
+
       <!-- 表示モード切り替え -->
       <div class="flex gap-1 bg-gray-700 rounded p-1">
         <button
@@ -228,6 +237,12 @@
         />
       </svg>
     </div>
+
+    <!-- 撮影モードダイアログ -->
+    <ScreenshotDialog
+      :is-open="showScreenshotDialog"
+      @close="showScreenshotDialog = false"
+    />
   </div>
 </template>
 
@@ -235,9 +250,11 @@
 import { ref, computed } from 'vue'
 import { useKeyboardStore } from '../stores/keyboard'
 import KeyComponent from './KeyComponent.vue'
+import ScreenshotDialog from './ScreenshotDialog.vue'
 
 const store = useKeyboardStore()
 const containerRef = ref<HTMLElement | null>(null)
+const showScreenshotDialog = ref(false)
 
 // 定数
 const keyUnit = 54 // 1uのピクセルサイズ

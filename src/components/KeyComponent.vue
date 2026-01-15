@@ -92,6 +92,7 @@
           xmlns="http://www.w3.org/1999/xhtml"
           :style="{
             fontSize: `${fontSize}px`,
+            fontFamily: legendFontFamily,
             color: '#e5e7eb',
             textAlign: 'left',
             wordBreak: 'break-all',
@@ -117,6 +118,7 @@
           xmlns="http://www.w3.org/1999/xhtml"
           :style="{
             fontSize: `${fontSize}px`,
+            fontFamily: legendFontFamily,
             color: '#e5e7eb',
             textAlign: 'center',
             wordBreak: 'break-all',
@@ -142,6 +144,7 @@
           xmlns="http://www.w3.org/1999/xhtml"
           :style="{
             fontSize: `${fontSize}px`,
+            fontFamily: legendFontFamily,
             color: '#e5e7eb',
             textAlign: 'right',
             wordBreak: 'break-all',
@@ -167,6 +170,7 @@
           xmlns="http://www.w3.org/1999/xhtml"
           :style="{
             fontSize: `${fontSize}px`,
+            fontFamily: legendFontFamily,
             color: '#e5e7eb',
             textAlign: 'left',
             wordBreak: 'break-all',
@@ -192,6 +196,7 @@
           xmlns="http://www.w3.org/1999/xhtml"
           :style="{
             fontSize: `${fontSizeCenter}px`,
+            fontFamily: legendFontFamily,
             color: 'white',
             textAlign: 'center',
             fontWeight: '600',
@@ -218,6 +223,7 @@
           xmlns="http://www.w3.org/1999/xhtml"
           :style="{
             fontSize: `${fontSize}px`,
+            fontFamily: legendFontFamily,
             color: '#e5e7eb',
             textAlign: 'right',
             wordBreak: 'break-all',
@@ -243,6 +249,7 @@
           xmlns="http://www.w3.org/1999/xhtml"
           :style="{
             fontSize: `${fontSize}px`,
+            fontFamily: legendFontFamily,
             color: '#e5e7eb',
             textAlign: 'left',
             wordBreak: 'break-all',
@@ -268,6 +275,7 @@
           xmlns="http://www.w3.org/1999/xhtml"
           :style="{
             fontSize: `${fontSize}px`,
+            fontFamily: legendFontFamily,
             color: '#e5e7eb',
             textAlign: 'center',
             wordBreak: 'break-all',
@@ -293,6 +301,7 @@
           xmlns="http://www.w3.org/1999/xhtml"
           :style="{
             fontSize: `${fontSize}px`,
+            fontFamily: legendFontFamily,
             color: '#e5e7eb',
             textAlign: 'right',
             wordBreak: 'break-all',
@@ -457,6 +466,11 @@ const keycodeLabel = computed(() => {
   const keycode = props.keyData.keycodes?.[store.currentLayer]
   if (!keycode) return ''
   return getKeycodeLabel(keycode, store.keyboardLayout)
+})
+
+const legendFontFamily = computed(() => {
+  const font = store.layout.legendFont || 'Noto Sans JP'
+  return `'${font}', sans-serif`
 })
 </script>
 
