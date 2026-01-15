@@ -54,6 +54,7 @@ The entire application state is centralized in `src/stores/keyboard.ts`:
 - `updateKey(keyId, updates)` - Partial update of key properties
 - `moveSelectedKeys(deltaX, deltaY)` - Move all selected keys (prevents negative coordinates)
 - `resizeSelectedKeys(deltaWidth, deltaHeight)` - Resize all selected keys (min 0.25u)
+- `rotateSelectedKeys(deltaAngle)` - Rotate all selected keys (normalizes to -180~180 range)
 - `addKey()` - Add new key (positioned right of selected key, or at 0,0)
 - `deleteSelectedKeys()` - Remove all selected keys
 - `loadLayout(newLayout)` - Replace entire layout (clears history, migrates old formats)
@@ -62,6 +63,7 @@ The entire application state is centralized in `src/stores/keyboard.ts`:
 - `toggleDisplayMode()` - Switch between 'legend' and 'matrix' display
 - `setKeyboardLayout(layoutType)` - Set keyboard layout type ('ANSI' | 'JIS')
 - `updateMetadata(updates)` - Update layout name, author, description
+- `setLegendFont(font)` - Set legend font (Google Fonts, or undefined for default)
 - `setCurrentLayer(layer)` - Change active layer (0-15)
 - `incrementLayerCount()` - Add layer (1-16 range), auto-assigns KC_TRNS to all keys on new layer
 - `decrementLayerCount()` - Remove layer, clears keycodes from removed layer
@@ -90,9 +92,7 @@ interface Key {
   legend: KeyLegend      // 9 text positions on keycap
   matrix: KeyMatrix      // Row/Col pin assignment
   keycodes?: Record<number, string>  // Layer number → QMK keycode
-  rotation?: number      // Rotation angle (degrees) - NOT IMPLEMENTED
-  rotationX?: number     // Rotation origin X - NOT IMPLEMENTED
-  rotationY?: number     // Rotation origin Y - NOT IMPLEMENTED
+  rotation?: number      // Rotation angle (degrees) - rotates around key center
   shape?: KeyShape       // 'rectangle' | 'iso-enter' | 'big-ass-enter' | 'circle'
 }
 
@@ -100,6 +100,7 @@ interface KeyboardLayout {
   name: string
   keys: Key[]
   layerCount: number     // Total layers (1-16)
+  legendFont?: LegendFont // Font for legend text (Google Fonts)
   metadata?: {
     author?: string
     description?: string
@@ -107,6 +108,14 @@ interface KeyboardLayout {
     modified?: string
   }
 }
+
+type LegendFont =
+  // Gothic
+  | 'Noto Sans JP' | 'M PLUS 1p' | 'M PLUS 2' | 'Zen Kaku Gothic New'
+  // Rounded
+  | 'M PLUS Rounded 1c' | 'Zen Maru Gothic' | 'Kosugi Maru'
+  // Mincho
+  | 'Noto Serif JP' | 'Zen Old Mincho' | 'Shippori Mincho'
 ```
 
 **KeyLegend** supports 9 positions in a 3x3 grid: topLeft, topCenter, topRight, centerLeft, center, centerRight, bottomLeft, bottomCenter, bottomRight.
@@ -172,24 +181,27 @@ interface GitHubUser {
 
 **KeyboardCanvas** (`src/components/KeyboardCanvas.vue`):
 - Renders SVG canvas with 0.25u grid lines
-- Handles keyboard shortcuts (arrow keys, Ctrl+C/V/Z/Y, Tab, Delete)
+- Handles keyboard shortcuts (arrow keys, R for rotation, Ctrl+C/V/Z/Y, Tab, Delete)
 - Multi-select support (Ctrl+click to toggle, click empty space to clear)
 - Canvas click deselects, key click selects
 - SVG size auto-expands based on key positions + 2u padding
+- Screenshot mode button (opens ScreenshotDialog)
 
 **KeyComponent** (`src/components/KeyComponent.vue`):
 - Renders individual key as SVG group
 - Supports multiple shapes: rectangle (default), iso-enter, big-ass-enter, circle
-- Displays legend text in 3x3 grid positions
+- Supports key rotation (SVG transform around key center)
+- Displays legend text in 3x3 grid positions with configurable font
 - Shows matrix info (R{row}C{col}) or keycode based on display mode
 - Visual state changes when selected (blue stroke)
 
 **PropertyPanel** (`src/components/PropertyPanel.vue`):
-- When no selection: Shows layout metadata editor (name, author, description, stats)
+- When no selection: Shows layout metadata editor (name, author, description, stats, legend font selector)
 - When single key selected: Shows key property editors
   - Shape selector (with fixed-size warning for special shapes)
   - Position (x, y) and size (width, height) inputs with Enter→next field navigation
-  - Legend inputs (9 positions in 3x3 grid)
+  - Rotation input (degrees, step 3°)
+  - Legend inputs (9 positions in 3x3 grid) with font preview
   - Matrix assignment (ROW, COL)
   - Keycode input with picker dialog button (per current layer)
   - Layer switcher (tabs) with ±buttons
@@ -235,7 +247,13 @@ interface GitHubUser {
 
 **AboutDialog** (`src/components/AboutDialog.vue`):
 - Application information dialog
-- Displays version number and GitHub link
+- Displays version number (auto-loaded from package.json via Vite define) and GitHub link
+
+**ScreenshotDialog** (`src/components/ScreenshotDialog.vue`):
+- Screenshot mode for capturing keyboard layout images
+- Full-size SVG rendering without grid lines or selection
+- Optional title/author display below keyboard
+- Dark background optimized for screenshots
 
 ### Services
 
@@ -295,6 +313,8 @@ interface GitHubUser {
 When canvas has focus:
 - **Arrow keys**: Move selected keys by 0.25u
 - **Shift + Arrow keys**: Resize selected keys by 0.25u
+- **R**: Rotate selected keys by +3°
+- **Shift + R**: Rotate selected keys by -3°
 - **Ctrl + C**: Copy selected keys
 - **Ctrl + V**: Paste copied keys
 - **Ctrl + Z**: Undo
@@ -306,11 +326,11 @@ When canvas has focus:
 ## Current Features
 
 ✅ SVG-based keyboard layout editor
-✅ Key selection, movement (grid-based), resizing
+✅ Key selection, movement (grid-based), resizing, rotation
 ✅ Multi-select support (Ctrl+click)
 ✅ Copy/paste (Ctrl+C/V) with relative positioning
 ✅ Undo/redo (Ctrl+Z/Y) with 20-state history
-✅ Key legends (9 positions in 3x3 grid)
+✅ Key legends (9 positions in 3x3 grid) with font selection (10 Google Fonts)
 ✅ Key matrix assignment (ROW/COL)
 ✅ Multi-layer support (1-16 layers) with per-layer keycodes
 ✅ QMK keycode picker dialog
@@ -324,6 +344,7 @@ When canvas has focus:
 ✅ Import from KLE (keyboard-layout-editor.com) format
 ✅ Export to QMK keyboard.json, Vial vial.json, and QMK keymap.c formats
 ✅ Layout metadata (name, author, description, timestamps)
+✅ Screenshot mode for capturing layout images
 ✅ Dark theme UI with Tailwind CSS
 
 ## Design Principles
@@ -339,7 +360,6 @@ When canvas has focus:
 See design.md for rationale and technical decisions.
 
 Potential enhancements (not prioritized):
-- Rotation support (data model exists, but rendering not implemented)
 - Drag-and-drop key positioning (currently keyboard/input only)
 - Zoom and pan for large layouts
 - Ruler and measurement tools

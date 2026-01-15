@@ -1,5 +1,5 @@
 <template>
-  <g :transform="`translate(${x}, ${y})`">
+  <g :transform="transformString">
     <!-- 長方形の場合（既存のロジック） -->
     <template v-if="!keyData.shape || keyData.shape === 'rectangle'">
       <!-- キーのボディ -->
@@ -437,6 +437,19 @@ const x = computed(() => props.keyData.x * keyUnit)
 const y = computed(() => props.keyData.y * keyUnit)
 const width = computed(() => props.keyData.width * keyUnit)
 const height = computed(() => props.keyData.height * keyUnit)
+const rotation = computed(() => props.keyData.rotation || 0)
+
+// SVG transform文字列（回転はキーの中心を基準）
+const transformString = computed(() => {
+  const translatePart = `translate(${x.value}, ${y.value})`
+  if (rotation.value === 0) {
+    return translatePart
+  }
+  // rotate(angle, cx, cy) - キーの中心を基準に回転
+  const cx = width.value / 2
+  const cy = height.value / 2
+  return `${translatePart} rotate(${rotation.value}, ${cx}, ${cy})`
+})
 
 const displayMode = computed(() => store.displayMode)
 

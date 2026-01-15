@@ -38,9 +38,7 @@ export interface Key {
   legend: KeyLegend
   matrix: KeyMatrix
   keycodes?: Record<number, string> // レイヤー番号 → QMKキーコード
-  rotation?: number // 回転角度（度）
-  rotationX?: number // 回転の中心点X
-  rotationY?: number // 回転の中心点Y
+  rotation?: number // 回転角度（度）- キーの中心を基準に回転
   shape?: KeyShape // キーの形状（未定義の場合はrectangle）
 }
 

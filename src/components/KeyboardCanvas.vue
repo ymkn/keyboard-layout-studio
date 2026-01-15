@@ -496,6 +496,13 @@ function handleKeyDown(event: KeyboardEvent) {
     event.preventDefault()
     store.pasteKeys()
   }
+
+  // R で回転（+3度）、Shift+R で逆回転（-3度）
+  if (event.key === 'r' || event.key === 'R') {
+    event.preventDefault()
+    const angle = event.shiftKey ? -3 : 3
+    store.rotateSelectedKeys(angle)
+  }
 }
 </script>
 

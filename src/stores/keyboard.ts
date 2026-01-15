@@ -213,6 +213,30 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     }
   }
 
+  function rotateSelectedKeys(deltaAngle: number) {
+    let rotated = false
+    for (const keyId of selectedKeyIds.value) {
+      const index = layout.value.keys.findIndex(k => k.id === keyId)
+      if (index !== -1) {
+        const key = layout.value.keys[index]
+        const currentRotation = key.rotation || 0
+        // 角度を-180〜180の範囲に正規化
+        let newRotation = currentRotation + deltaAngle
+        while (newRotation > 180) newRotation -= 360
+        while (newRotation <= -180) newRotation += 360
+        layout.value.keys[index] = {
+          ...key,
+          rotation: newRotation
+        }
+        rotated = true
+      }
+    }
+    if (rotated) {
+      layout.value.metadata!.modified = new Date().toISOString()
+      saveHistory()
+    }
+  }
+
   function addKey() {
     const newId = String(Date.now())
 
@@ -556,6 +580,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     updateKey,
     moveSelectedKeys,
     resizeSelectedKeys,
+    rotateSelectedKeys,
     addKey,
     deleteSelectedKeys,
     loadLayout,

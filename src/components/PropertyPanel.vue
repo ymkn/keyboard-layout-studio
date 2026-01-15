@@ -229,6 +229,24 @@
         </p>
       </div>
 
+      <!-- 回転 -->
+      <div class="property-section">
+        <h3 class="text-sm font-semibold text-gray-300 mb-2">回転</h3>
+        <div class="flex items-center gap-2">
+          <input
+            :ref="(el) => setInputRef(el, 'rotation')"
+            type="number"
+            :value="store.selectedKey.rotation || 0"
+            @input="updateRotation"
+            @keydown.enter="handleEnterKey('rotation')"
+            step="3"
+            class="flex-1 px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-sm"
+          />
+          <span class="text-gray-400 text-sm">度</span>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">R: +3° / Shift+R: -3°</p>
+      </div>
+
       <!-- レジェンド -->
       <div class="property-section">
         <h3 class="text-sm font-semibold text-gray-300 mb-2">レジェンド</h3>
@@ -581,6 +599,17 @@ function updateHeight(event: Event) {
   }
 }
 
+function updateRotation(event: Event) {
+  const value = parseFloat((event.target as HTMLInputElement).value)
+  if (!isNaN(value) && store.selectedKey) {
+    // 角度を-180〜180の範囲に正規化
+    let normalizedValue = value
+    while (normalizedValue > 180) normalizedValue -= 360
+    while (normalizedValue <= -180) normalizedValue += 360
+    store.updateKey(store.selectedKey.id, { rotation: normalizedValue })
+  }
+}
+
 function updateLegend(position: string, event: Event) {
   const value = (event.target as HTMLInputElement).value
   if (store.selectedKey) {
@@ -685,6 +714,20 @@ function handleEnterKey(fieldName: string) {
           alert('高さは0.25以上の数値である必要があります')
         } else {
           store.updateKey(store.selectedKey.id, { height: numValue })
+        }
+        break
+      }
+      case 'rotation': {
+        const numValue = parseFloat(value)
+        if (isNaN(numValue)) {
+          isValid = false
+          alert('回転角度は数値である必要があります')
+        } else {
+          // 角度を-180〜180の範囲に正規化
+          let normalizedValue = numValue
+          while (normalizedValue > 180) normalizedValue -= 360
+          while (normalizedValue <= -180) normalizedValue += 360
+          store.updateKey(store.selectedKey.id, { rotation: normalizedValue })
         }
         break
       }
