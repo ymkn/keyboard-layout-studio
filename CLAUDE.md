@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Keyboard Layout Studio is a web-based keyboard layout editor designed as an alternative to keyboard-layout-editor.com, specifically focused on features for keyboard developers. The app is client-side only, built with Vue 3, TypeScript, and SVG-based rendering.
+Keyboard Layout Studio is a web-based keyboard layout editor designed as an alternative to keyboard-layout-editor.com, specifically focused on features for keyboard developers. The app is built with Vue 3, TypeScript, and SVG-based rendering.
+
+The app supports saving layouts to LocalStorage or GitHub Gist. For Gist integration, a Cloudflare Worker is used to handle OAuth token exchange (avoiding CORS issues with GitHub's OAuth endpoint).
 
 ## Development Commands
 
@@ -37,6 +39,11 @@ The entire application state is centralized in `src/stores/keyboard.ts`:
 - `currentLayer` (number) - Active layer for keycode editing (0-15)
 - `history` (KeyboardLayout[]) - Undo/redo history (max 20 states)
 - `historyIndex` (number) - Current position in history
+- `layoutSource` ('new' | 'local' | 'gist') - Where the current layout was loaded from
+- `layoutGistId` (string | null) - Gist ID if loaded from Gist
+- `layoutGistFileKey` (string | null) - File key within Gist
+- `saveDestination` ('local' | 'gist') - Where to save the layout
+- `githubAuth` (GitHubAuth | null) - GitHub authentication info (token, username, avatarUrl)
 
 **Key Actions**:
 - `selectKey(keyId)` - Select single key (or deselect if null)
@@ -60,6 +67,12 @@ The entire application state is centralized in `src/stores/keyboard.ts`:
 - `decrementLayerCount()` - Remove layer, clears keycodes from removed layer
 - `undo()` / `redo()` - Navigate history
 - `createNewLayout()` - Reset to empty layout (clears history)
+- `setLayoutSource(source, gistId?, fileKey?)` - Set layout source tracking
+- `clearLayoutSource()` - Reset to local source
+- `setSaveDestination(dest)` - Set save destination ('local' | 'gist')
+- `setGitHubAuth(auth)` - Set GitHub authentication (persists to localStorage)
+- `loadGitHubAuth()` - Load GitHub auth from localStorage
+- `logoutGitHub()` - Clear GitHub auth and reset layout source if needed
 
 All mutations update `metadata.modified` timestamp and save to history automatically.
 
@@ -101,6 +114,53 @@ interface KeyboardLayout {
 **KeyMatrix** contains optional `row` and `col` numbers for physical matrix pin assignments.
 
 **KeyShape** determines visual rendering. Special shapes (iso-enter, big-ass-enter, circle) have fixed dimensions and cannot be resized.
+
+### GitHub Types (`src/types/github.ts`)
+
+```typescript
+type StorageSource = 'new' | 'local' | 'gist'  // Layout source tracking
+
+interface GitHubAuth {
+  token: string
+  username: string
+  avatarUrl?: string
+}
+
+interface GistFile {
+  filename: string
+  type: string
+  language: string | null
+  raw_url: string
+  size: number
+  content?: string
+}
+
+interface Gist {
+  id: string
+  url: string
+  html_url: string
+  description: string | null
+  files: Record<string, GistFile>
+  public: boolean
+  created_at: string
+  updated_at: string
+}
+
+interface SavedLayoutItem {
+  id: string             // localStorage key or gist ID
+  filename: string       // Display name
+  description: string
+  updatedAt: string      // ISO timestamp
+  source: StorageSource
+  gistFileKey?: string   // File key within Gist
+}
+
+interface GitHubUser {
+  login: string
+  avatar_url: string
+  html_url: string
+}
+```
 
 ### Component Structure
 
@@ -155,13 +215,45 @@ interface KeyboardLayout {
 **ConfirmDialog** (`src/components/ConfirmDialog.vue`):
 - Reusable confirmation dialog for destructive actions
 
-**GistListDialog** (`src/components/GistListDialog.vue`):
-- Displays saved layouts from LocalStorage
+**SavedListDialog** (`src/components/SavedListDialog.vue`):
+- Displays saved layouts from LocalStorage and GitHub Gist (tabbed UI)
+- Shows local vs Gist source indicator
 - Delete and select actions
+- Login prompt for Gist tab when not authenticated
+
+**GitHubLoginDialog** (`src/components/GitHubLoginDialog.vue`):
+- Modal dialog for GitHub authentication
+- Initiates GitHub OAuth flow via `startOAuthFlow()`
+- Checks if GitHub integration is configured before starting flow
+- Shows loading state during authentication
+- Displays error messages on failure
+
+**GitHubUserBadge** (`src/components/GitHubUserBadge.vue`):
+- Shows authenticated GitHub user info in header
+- Displays avatar image, username
+- Logout button emits event to parent
 
 **AboutDialog** (`src/components/AboutDialog.vue`):
 - Application information dialog
 - Displays version number and GitHub link
+
+### Services
+
+**`src/services/github.ts`**:
+- `isGitHubIntegrationConfigured()` - Check if GitHub integration env vars are set
+- `GITHUB_NOT_CONFIGURED_MESSAGE` - Error message for unconfigured GitHub integration
+- `GitHubAPIError` class - Custom error class with HTTP status code
+- `GitHubService` class - GitHub API wrapper for Gist operations
+  - `validateToken()` - Validate token and get user info
+  - `listGists()` - List user's gists
+  - `getGist(gistId)` - Get single gist with content
+  - `createGist(filename, content, description, isPublic)` - Create new gist
+  - `updateGist(gistId, filename, content, description?)` - Update existing gist
+  - `deleteGist(gistId)` - Delete gist
+- `startOAuthFlow(clientId, redirectUri, scope)` - Start GitHub OAuth flow
+- `exchangeCodeForToken(code, workerUrl?)` - Exchange OAuth code for token via Worker
+- `filterKLSGists(gists)` - Filter gists containing `.kls.json` files
+- `getGitHubErrorMessage(error)` - Convert errors to user-friendly messages (Japanese)
 
 ### Utilities
 
@@ -226,15 +318,17 @@ When canvas has focus:
 ✅ Keyboard layout type selection (ANSI/JIS) with appropriate keycode labels
 ✅ Key shapes: rectangle, iso-enter, big-ass-enter, circle
 ✅ LocalStorage persistence with save/load/delete
+✅ GitHub Gist integration (OAuth authentication)
+✅ Save destination toggle (Local/Gist)
 ✅ JSON editor with live validation
 ✅ Import from KLE (keyboard-layout-editor.com) format
-✅ Export to QMK keyboard.json and Vial vial.json formats
+✅ Export to QMK keyboard.json, Vial vial.json, and QMK keymap.c formats
 ✅ Layout metadata (name, author, description, timestamps)
 ✅ Dark theme UI with Tailwind CSS
 
 ## Design Principles
 
-1. **Client-side only**: No server dependencies, suitable for static hosting
+1. **Primarily client-side**: Main app is static, only OAuth token exchange uses Cloudflare Worker
 2. **Minimal dependencies**: Only Vue 3, Pinia, Tailwind CSS, TypeScript
 3. **Type safety**: Strict TypeScript mode, no `any` types
 4. **Simple over clever**: Avoid premature abstractions
@@ -251,7 +345,6 @@ Potential enhancements (not prioritized):
 - Ruler and measurement tools
 - Snap-to-grid toggle
 - Light/dark theme toggle
-- GitHub OAuth + Gist integration
 - Export to other firmware formats (ZMK, etc.)
 
 ## Important Notes
@@ -264,3 +357,30 @@ Potential enhancements (not prioritized):
 - SVG rendering uses Tailwind classes where possible, with inline styles for dynamic properties (transform, dimensions)
 - History is cleared when loading a new layout to prevent memory leaks
 - LocalStorage keys use prefix `kls-layout-` + layout name
+- GitHub auth is stored in localStorage with key `kls-github-auth`
+- OAuth state and redirect URI stored in sessionStorage during OAuth flow
+- Gist files use `.kls.json` extension for identification
+
+## Cloudflare Worker (OAuth Token Exchange)
+
+Located in `workers/oauth-token-exchange/`:
+- Handles GitHub OAuth code-to-token exchange (required due to CORS restrictions)
+- Endpoints:
+  - `GET /` - Health check, returns `{"status":"ok","message":"KLS Token Exchange Worker"}`
+  - `POST /api/oauth/token` - Token exchange, expects `{ code, redirect_uri }`
+- Environment secrets: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
+- See `doc/WORKERS_DEPLOY.md` for detailed deployment instructions
+
+**Deploy commands:**
+```bash
+cd workers/oauth-token-exchange
+npx wrangler deploy
+npx wrangler secret put GITHUB_CLIENT_ID
+npx wrangler secret put GITHUB_CLIENT_SECRET
+```
+
+**Environment variables for the SPA** (in `.env.development` and `.env.production`):
+- `VITE_GITHUB_CLIENT_ID` - GitHub OAuth App client ID
+- `VITE_OAUTH_WORKER_URL` - URL of the deployed Cloudflare Worker
+
+**Note**: If these environment variables are not set, GitHub integration features are disabled gracefully. The `isGitHubIntegrationConfigured()` function checks for their presence.

@@ -1,0 +1,10 @@
+{
+  "name": "kls-oauth-worker",
+  "version": "1.0.0",
+  "description": "OAuth Token Exchange Worker for KLS",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy"
+  }
+}

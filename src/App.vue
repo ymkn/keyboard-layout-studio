@@ -39,12 +39,58 @@
         >
           <i class="fa-solid fa-folder-open"></i> 開く
         </button>
-        <button
-          @click="handleSaveLayout"
-          class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-sm font-semibold"
-        >
-          <i class="fa-solid fa-floppy-disk"></i> 保存
-        </button>
+        <!-- 保存ボタン + 保存先トグル -->
+        <div class="flex items-center">
+          <button
+            @click="handleSaveLayout"
+            class="px-4 py-2 bg-gray-600 text-white rounded-l hover:bg-gray-700 transition-colors text-sm font-semibold border-r border-gray-500"
+          >
+            <i class="fa-solid fa-floppy-disk"></i> 保存
+          </button>
+          <div class="flex rounded-r overflow-hidden border border-gray-600 border-l-0">
+            <button
+              @click="store.setSaveDestination('local')"
+              :class="[
+                'px-3 py-2 text-sm transition-colors',
+                store.saveDestination === 'local'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+              ]"
+              title="ローカルに保存"
+            >
+              <i class="fa-solid fa-hard-drive"></i>
+            </button>
+            <button
+              @click="store.isLoggedIn ? store.setSaveDestination('gist') : (showGitHubLoginDialog = true)"
+              :class="[
+                'px-3 py-2 text-sm transition-colors',
+                store.saveDestination === 'gist'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-700 text-gray-400 hover:bg-gray-600',
+                !store.isLoggedIn && 'opacity-60'
+              ]"
+              :title="store.isLoggedIn ? 'Gistに保存' : 'GitHubにログインしてください'"
+            >
+              <i class="fa-brands fa-github"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- GitHub関連 -->
+        <div class="border-l border-gray-600 pl-4 ml-2">
+          <GitHubUserBadge
+            v-if="store.isLoggedIn && store.githubAuth"
+            :auth="store.githubAuth"
+            @logout="handleGitHubLogout"
+          />
+          <button
+            v-else
+            @click="showGitHubLoginDialog = true"
+            class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-sm font-semibold"
+          >
+            <i class="fa-brands fa-github"></i> GitHubでログイン
+          </button>
+        </div>
       </div>
     </header>
 
@@ -112,12 +158,14 @@
     <!-- レイアウト一覧ダイアログ -->
     <SavedListDialog
       :show="showLayoutListDialog"
-      :gists="layoutList"
+      :items="layoutList"
       :loading="layoutListLoading"
       :error="layoutListError"
+      :is-logged-in="store.isLoggedIn"
       @select="handleLayoutSelect"
       @delete="handleDeleteRequest"
       @cancel="showLayoutListDialog = false"
+      @login="showLayoutListDialog = false; showGitHubLoginDialog = true"
     />
 
     <!-- 削除確認ダイアログ -->
@@ -147,37 +195,42 @@
       @cancel="showAboutDialog = false"
     />
 
+    <!-- GitHubログインダイアログ -->
+    <GitHubLoginDialog
+      :show="showGitHubLoginDialog"
+      @cancel="showGitHubLoginDialog = false"
+    />
+
     <!-- 保存成功通知 -->
     <div
       v-if="showSaveNotification"
-      class="fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded shadow-lg z-50"
+      :class="[
+        'fixed top-20 right-4 text-white px-6 py-3 rounded shadow-lg z-50',
+        notificationType === 'success' ? 'bg-green-600' : 'bg-red-600'
+      ]"
     >
-      保存しました
+      {{ notificationMessage }}
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import KeyboardCanvas from './components/KeyboardCanvas.vue'
 import PropertyPanel from './components/PropertyPanel.vue'
 import JsonEditor from './components/JsonEditor.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
 import SavedListDialog from './components/SavedListDialog.vue'
 import AboutDialog from './components/AboutDialog.vue'
+import GitHubLoginDialog from './components/GitHubLoginDialog.vue'
+import GitHubUserBadge from './components/GitHubUserBadge.vue'
 import { useKeyboardStore } from './stores/keyboard'
+import { GitHubService, filterKLSGists, getGitHubErrorMessage, exchangeCodeForToken } from './services/github'
 import type { KeyboardLayout } from './types/keyboard'
+import type { SavedLayoutItem } from './types/github'
 
 // アプリケーションバージョン
-const appVersion = '0.1.0'
-
-// LocalStorage保存用の型定義
-interface SavedLayout {
-  id: string
-  filename: string
-  description: string
-  updatedAt: string
-}
+const appVersion = '0.2.0'
 
 const store = useKeyboardStore()
 
@@ -187,20 +240,25 @@ const showAboutDialog = ref(false)
 
 // レイアウト一覧関連
 const showLayoutListDialog = ref(false)
-const layoutList = ref<SavedLayout[]>([])
+const layoutList = ref<SavedLayoutItem[]>([])
 const layoutListLoading = ref(false)
 const layoutListError = ref<string | null>(null)
 
 // 削除関連
 const showDeleteConfirmDialog = ref(false)
-const layoutToDelete = ref<SavedLayout | null>(null)
+const layoutToDelete = ref<SavedLayoutItem | null>(null)
 
 // 開く確認関連
 const showOpenConfirmDialog = ref(false)
-const pendingLayoutToOpen = ref<SavedLayout | null>(null)
+const pendingLayoutToOpen = ref<SavedLayoutItem | null>(null)
 
 // 通知
 const showSaveNotification = ref(false)
+const notificationMessage = ref('保存しました')
+const notificationType = ref<'success' | 'error'>('success')
+
+// GitHub認証関連
+const showGitHubLoginDialog = ref(false)
 
 const STORAGE_PREFIX = 'kls-layout-'
 
@@ -219,6 +277,67 @@ function handleLayoutChange() {
   // 必要に応じて、将来的にLocalStorageに保存するなどの処理を追加可能
 }
 
+// OAuthコールバックを処理
+async function handleOAuthCallback(): Promise<void> {
+  const urlParams = new URLSearchParams(window.location.search)
+  const code = urlParams.get('code')
+  const error = urlParams.get('error')
+  const errorDescription = urlParams.get('error_description')
+  
+  if (error) {
+    showNotification(`GitHub認証エラー: ${errorDescription || error}`, 'error')
+    window.history.replaceState({}, '', window.location.pathname)
+    return
+  }
+  
+  if (!code) return
+  
+  const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID
+  if (!clientId) {
+    showNotification('VITE_GITHUB_CLIENT_IDが設定されていません', 'error')
+    window.history.replaceState({}, '', window.location.pathname)
+    return
+  }
+  
+  try {
+    const { access_token } = await exchangeCodeForToken(code)
+    const service = new GitHubService(access_token)
+    const user = await service.validateToken()
+    
+    store.setGitHubAuth({
+      token: access_token,
+      username: user.login,
+      avatarUrl: user.avatar_url
+    })
+    
+    showNotification(`${user.login}として認証されました`, 'success')
+  } catch (error) {
+    showNotification(`認証エラー: ${getGitHubErrorMessage(error)}`, 'error')
+  } finally {
+    window.history.replaceState({}, '', window.location.pathname)
+  }
+}
+
+// ページロード時に認証情報を復元し、OAuthコールバックを処理
+onMounted(async () => {
+  await handleOAuthCallback()
+  store.loadGitHubAuth()
+})
+
+function handleGitHubLogout() {
+  store.logoutGitHub()
+}
+
+// 通知表示ヘルパー
+function showNotification(message: string, type: 'success' | 'error' = 'success') {
+  notificationMessage.value = message
+  notificationType.value = type
+  showSaveNotification.value = true
+  setTimeout(() => {
+    showSaveNotification.value = false
+  }, 3000)
+}
+
 function handleNewLayout() {
   store.createNewLayout()
   showNewLayoutDialog.value = false
@@ -226,40 +345,63 @@ function handleNewLayout() {
   activeTab.value = 'layout'
 }
 
-// LocalStorageから開く
-function handleOpenLayout() {
-  showLayoutListDialog.value = true
-  layoutListLoading.value = true
-  layoutListError.value = null
+// ローカルストレージからレイアウト一覧を取得
+function getLocalLayouts(): SavedLayoutItem[] {
+  const layouts: SavedLayoutItem[] = []
 
-  try {
-    const layouts: SavedLayout[] = []
-
-    // LocalStorageから保存済みレイアウトを取得
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key && key.startsWith(STORAGE_PREFIX)) {
-        const content = localStorage.getItem(key)
-        if (content) {
-          try {
-            const layout: KeyboardLayout = JSON.parse(content)
-            layouts.push({
-              id: key,
-              filename: `${layout.name || 'Untitled'}.kls.json`,
-              description: layout.metadata?.description || '',
-              updatedAt: layout.metadata?.modified || layout.metadata?.created || new Date().toISOString()
-            })
-          } catch (e) {
-            console.error('レイアウト読み込みエラー:', e)
-          }
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key && key.startsWith(STORAGE_PREFIX)) {
+      const content = localStorage.getItem(key)
+      if (content) {
+        try {
+          const layout: KeyboardLayout = JSON.parse(content)
+          layouts.push({
+            id: key,
+            filename: `${layout.name || 'Untitled'}.kls.json`,
+            description: layout.metadata?.description || '',
+            updatedAt: layout.metadata?.modified || layout.metadata?.created || new Date().toISOString(),
+            source: 'local'
+          })
+        } catch (e) {
+          console.error('レイアウト読み込みエラー:', e)
         }
       }
     }
+  }
 
-    // 更新日時でソート（新しい順）
-    layouts.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+  return layouts
+}
 
-    layoutList.value = layouts
+// LocalStorage + Gistから開く
+async function handleOpenLayout() {
+  showLayoutListDialog.value = true
+  layoutListLoading.value = true
+  layoutListError.value = null
+  layoutList.value = [] // 古いデータをクリアして最新状態を取得
+
+  try {
+    // ローカルレイアウトを取得
+    const localLayouts = getLocalLayouts()
+
+    // Gistからレイアウトを取得（認証済みの場合のみ）
+    let gistLayouts: SavedLayoutItem[] = []
+    if (store.githubAuth) {
+      try {
+        const service = new GitHubService(store.githubAuth.token)
+        const gists = await service.listGists()
+        gistLayouts = filterKLSGists(gists)
+      } catch (e) {
+        // Gist取得エラーは警告として表示し、ローカルのみ表示
+        console.warn('Gist取得エラー:', e)
+      }
+    }
+
+    // マージして更新日時でソート（新しい順）
+    const allLayouts = [...localLayouts, ...gistLayouts]
+    allLayouts.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+
+    layoutList.value = allLayouts
   } catch (error) {
     layoutListError.value = error instanceof Error ? error.message : 'レイアウト一覧の取得に失敗しました'
   } finally {
@@ -267,7 +409,7 @@ function handleOpenLayout() {
   }
 }
 
-function handleLayoutSelect(item: SavedLayout) {
+function handleLayoutSelect(item: SavedLayoutItem) {
   // 編集中の内容がある場合は確認ダイアログを表示
   if (store.canUndo) {
     pendingLayoutToOpen.value = item
@@ -276,19 +418,48 @@ function handleLayoutSelect(item: SavedLayout) {
   }
 
   // 履歴がない場合は直接ロード
-  loadLayoutFromStorage(item)
+  loadLayoutFromSource(item)
 }
 
-function loadLayoutFromStorage(item: SavedLayout) {
+async function loadLayoutFromSource(item: SavedLayoutItem) {
   try {
-    const content = localStorage.getItem(item.id)
-    if (!content) {
-      alert('レイアウトが見つかりません')
-      return
+    if (item.source === 'local') {
+      // ローカルストレージから読み込み
+      const content = localStorage.getItem(item.id)
+      if (!content) {
+        alert('レイアウトが見つかりません')
+        return
+      }
+
+      const layout = JSON.parse(content) as KeyboardLayout
+      store.loadLayout(layout)
+      store.setLayoutSource('local')
+    } else {
+      // Gistから読み込み
+      if (!store.githubAuth) {
+        alert('GitHubにログインしてください')
+        return
+      }
+
+      const service = new GitHubService(store.githubAuth.token)
+      const gist = await service.getGist(item.id)
+      const fileKey = item.gistFileKey || Object.keys(gist.files).find(k => k.endsWith('.kls.json'))
+      if (!fileKey || !gist.files[fileKey]) {
+        alert('ファイルが見つかりません')
+        return
+      }
+
+      const content = gist.files[fileKey].content
+      if (!content) {
+        alert('ファイル内容を取得できませんでした')
+        return
+      }
+
+      const layout = JSON.parse(content) as KeyboardLayout
+      store.loadLayout(layout)
+      store.setLayoutSource('gist', item.id, fileKey)
     }
 
-    const layout = JSON.parse(content) as KeyboardLayout
-    store.loadLayout(layout)
     showLayoutListDialog.value = false
     activeTab.value = 'layout'
   } catch (error) {
@@ -302,49 +473,96 @@ function handleOpenConfirm() {
     return
   }
 
-  loadLayoutFromStorage(pendingLayoutToOpen.value)
+  loadLayoutFromSource(pendingLayoutToOpen.value)
   showOpenConfirmDialog.value = false
   pendingLayoutToOpen.value = null
 }
 
-function handleDeleteRequest(item: SavedLayout) {
+function handleDeleteRequest(item: SavedLayoutItem) {
   layoutToDelete.value = item
   showDeleteConfirmDialog.value = true
 }
 
-function handleDeleteConfirm() {
+async function handleDeleteConfirm() {
   if (!layoutToDelete.value) {
     return
   }
 
+  const itemToDelete = layoutToDelete.value
+
   try {
-    localStorage.removeItem(layoutToDelete.value.id)
+    if (itemToDelete.source === 'local') {
+      // ローカルストレージから削除
+      localStorage.removeItem(itemToDelete.id)
+    } else {
+      // Gistから削除
+      if (!store.githubAuth) {
+        alert('GitHubにログインしてください')
+        return
+      }
+      const service = new GitHubService(store.githubAuth.token)
+      await service.deleteGist(itemToDelete.id)
+    }
+
+    // リストから即座に削除（APIキャッシュを待たずに反映）
+    layoutList.value = layoutList.value.filter(item => {
+      if (item.source !== itemToDelete.source) return true
+      if (item.source === 'local') return item.id !== itemToDelete.id
+      // Gistの場合はgistIdとfileKeyで比較
+      return !(item.id === itemToDelete.id && item.gistFileKey === itemToDelete.gistFileKey)
+    })
+
     showDeleteConfirmDialog.value = false
     layoutToDelete.value = null
-
-    // レイアウト一覧を再読み込み
-    handleOpenLayout()
   } catch (error) {
-    alert('削除に失敗しました')
+    alert('削除に失敗しました: ' + getGitHubErrorMessage(error))
     console.error(error)
   }
 }
 
-// LocalStorageへ保存
-function handleSaveLayout() {
+// 保存処理（saveDestinationに応じてローカルまたはGistに保存）
+async function handleSaveLayout() {
   try {
-    const key = STORAGE_PREFIX + (store.layout.name || 'untitled')
     const content = JSON.stringify(store.layout, null, 2)
+    const filename = `${store.layout.name || 'untitled'}.kls.json`
 
-    localStorage.setItem(key, content)
+    if (store.saveDestination === 'gist') {
+      if (!store.githubAuth) {
+        showGitHubLoginDialog.value = true
+        return
+      }
 
-    // 保存成功通知
-    showSaveNotification.value = true
-    setTimeout(() => {
-      showSaveNotification.value = false
-    }, 3000)
+      const service = new GitHubService(store.githubAuth.token)
+
+      if (store.layoutSource === 'gist' && store.layoutGistId) {
+        // 既存のGistを更新
+        const fileKey = store.layoutGistFileKey || filename
+        await service.updateGist(
+          store.layoutGistId,
+          fileKey,
+          content,
+          store.layout.metadata?.description || ''
+        )
+      } else {
+        // 新規Gistを作成
+        const gist = await service.createGist(
+          filename,
+          content,
+          store.layout.metadata?.description || '',
+          false
+        )
+        store.setLayoutSource('gist', gist.id, filename)
+      }
+      showNotification('Gistに保存しました')
+    } else {
+      // ローカルストレージに保存
+      const key = STORAGE_PREFIX + (store.layout.name || 'untitled')
+      localStorage.setItem(key, content)
+      store.setLayoutSource('local')
+      showNotification('保存しました')
+    }
   } catch (error) {
-    alert('保存に失敗しました')
+    alert('保存に失敗しました: ' + getGitHubErrorMessage(error))
     console.error(error)
   }
 }
