@@ -33,11 +33,55 @@
           Gist
           <span v-if="isLoggedIn" class="ml-2 px-2 py-0.5 bg-gray-600 rounded text-xs">{{ gistItems.length }}</span>
         </button>
+        <button
+          @click="activeTab = 'preset'"
+          :class="[
+            'flex-1 px-4 py-3 text-sm font-medium transition-colors',
+            activeTab === 'preset'
+              ? 'text-white border-b-2 border-blue-500 bg-gray-700'
+              : 'text-gray-400 hover:text-white hover:bg-gray-700'
+          ]"
+        >
+          <i class="fa-solid fa-shapes mr-2"></i>
+          プリセット
+          <span class="ml-2 px-2 py-0.5 bg-gray-600 rounded text-xs">{{ presets.length }}</span>
+        </button>
       </div>
 
       <div class="flex-1 overflow-auto p-6">
+        <!-- プリセットタブ -->
+        <template v-if="activeTab === 'preset'">
+          <div v-if="presets.length === 0" class="text-center py-8">
+            <div class="text-gray-400">プリセットがありません</div>
+          </div>
+
+          <div v-else class="space-y-2">
+            <div
+              v-for="preset in presets"
+              :key="preset.id"
+              @click="$emit('select-preset', preset)"
+              class="bg-gray-700 rounded p-4 hover:bg-gray-600 transition-colors cursor-pointer"
+            >
+              <div class="flex items-start">
+                <div class="flex-1 min-w-0">
+                  <h3 class="text-white font-semibold truncate">{{ preset.name }}</h3>
+                  <p v-if="preset.description" class="text-gray-400 text-sm mt-1">
+                    {{ preset.description }}
+                  </p>
+                </div>
+                <div class="ml-4 flex-shrink-0">
+                  <span class="px-2 py-1 bg-blue-600 text-white rounded text-xs">
+                    <i class="fa-solid fa-shapes mr-1"></i>
+                    テンプレート
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+
         <!-- ローカルタブ -->
-        <template v-if="activeTab === 'local'">
+        <template v-else-if="activeTab === 'local'">
           <div v-if="loading" class="text-center py-8">
             <div class="text-gray-400">読み込み中...</div>
           </div>
@@ -161,8 +205,11 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import type { SavedLayoutItem, StorageSource } from '../types/github'
+import type { SavedLayoutItem } from '../types/github'
 import { isGitHubIntegrationConfigured, GITHUB_NOT_CONFIGURED_MESSAGE } from '../services/github'
+import { getPresets, type PresetInfo } from '../services/presets'
+
+type TabType = 'preset' | 'local' | 'gist'
 
 interface Props {
   show: boolean
@@ -174,6 +221,7 @@ interface Props {
 
 interface Emits {
   (e: 'select', item: SavedLayoutItem): void
+  (e: 'select-preset', preset: PresetInfo): void
   (e: 'delete', item: SavedLayoutItem): void
   (e: 'cancel'): void
   (e: 'login'): void
@@ -182,7 +230,8 @@ interface Emits {
 const props = defineProps<Props>()
 defineEmits<Emits>()
 
-const activeTab = ref<StorageSource>('local')
+const activeTab = ref<TabType>('local')
+const presets = getPresets()
 
 const localItems = computed(() => props.items.filter(item => item.source === 'local'))
 const gistItems = computed(() => props.items.filter(item => item.source === 'gist'))

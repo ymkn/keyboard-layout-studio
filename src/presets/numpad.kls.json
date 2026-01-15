@@ -1,0 +1,27 @@
+{
+  "name": "Numpad",
+  "layerCount": 1,
+  "keys": [
+    {"id": "1", "x": 0, "y": 0, "width": 1, "height": 1, "legend": {"center": "Num"}, "matrix": {"row": 0, "col": 0}, "keycodes": {"0": "KC_NUM"}},
+    {"id": "2", "x": 1, "y": 0, "width": 1, "height": 1, "legend": {"center": "/"}, "matrix": {"row": 0, "col": 1}, "keycodes": {"0": "KC_PSLS"}},
+    {"id": "3", "x": 2, "y": 0, "width": 1, "height": 1, "legend": {"center": "*"}, "matrix": {"row": 0, "col": 2}, "keycodes": {"0": "KC_PAST"}},
+    {"id": "4", "x": 3, "y": 0, "width": 1, "height": 1, "legend": {"center": "-"}, "matrix": {"row": 0, "col": 3}, "keycodes": {"0": "KC_PMNS"}},
+    {"id": "5", "x": 0, "y": 1, "width": 1, "height": 1, "legend": {"center": "7"}, "matrix": {"row": 1, "col": 0}, "keycodes": {"0": "KC_P7"}},
+    {"id": "6", "x": 1, "y": 1, "width": 1, "height": 1, "legend": {"center": "8"}, "matrix": {"row": 1, "col": 1}, "keycodes": {"0": "KC_P8"}},
+    {"id": "7", "x": 2, "y": 1, "width": 1, "height": 1, "legend": {"center": "9"}, "matrix": {"row": 1, "col": 2}, "keycodes": {"0": "KC_P9"}},
+    {"id": "8", "x": 3, "y": 1, "width": 1, "height": 2, "legend": {"center": "+"}, "matrix": {"row": 1, "col": 3}, "keycodes": {"0": "KC_PPLS"}},
+    {"id": "9", "x": 0, "y": 2, "width": 1, "height": 1, "legend": {"center": "4"}, "matrix": {"row": 2, "col": 0}, "keycodes": {"0": "KC_P4"}},
+    {"id": "10", "x": 1, "y": 2, "width": 1, "height": 1, "legend": {"center": "5"}, "matrix": {"row": 2, "col": 1}, "keycodes": {"0": "KC_P5"}},
+    {"id": "11", "x": 2, "y": 2, "width": 1, "height": 1, "legend": {"center": "6"}, "matrix": {"row": 2, "col": 2}, "keycodes": {"0": "KC_P6"}},
+    {"id": "12", "x": 0, "y": 3, "width": 1, "height": 1, "legend": {"center": "1"}, "matrix": {"row": 3, "col": 0}, "keycodes": {"0": "KC_P1"}},
+    {"id": "13", "x": 1, "y": 3, "width": 1, "height": 1, "legend": {"center": "2"}, "matrix": {"row": 3, "col": 1}, "keycodes": {"0": "KC_P2"}},
+    {"id": "14", "x": 2, "y": 3, "width": 1, "height": 1, "legend": {"center": "3"}, "matrix": {"row": 3, "col": 2}, "keycodes": {"0": "KC_P3"}},
+    {"id": "15", "x": 3, "y": 3, "width": 1, "height": 2, "legend": {"center": "Enter"}, "matrix": {"row": 3, "col": 3}, "keycodes": {"0": "KC_PENT"}},
+    {"id": "16", "x": 0, "y": 4, "width": 2, "height": 1, "legend": {"center": "0"}, "matrix": {"row": 4, "col": 0}, "keycodes": {"0": "KC_P0"}},
+    {"id": "17", "x": 2, "y": 4, "width": 1, "height": 1, "legend": {"center": "."}, "matrix": {"row": 4, "col": 1}, "keycodes": {"0": "KC_PDOT"}}
+  ],
+  "metadata": {
+    "author": "KLS",
+    "description": "Standard numpad layout"
+  }
+}

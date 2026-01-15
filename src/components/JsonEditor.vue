@@ -150,7 +150,6 @@ import { useKeyboardStore } from '../stores/keyboard'
 import type { KeyboardLayout } from '../types/keyboard'
 import { exportToQMK, exportToVial, exportToQMKKeymapC, downloadJSON, downloadText } from '../utils/export'
 import { parseKLEJson } from '../utils/kle-import'
-import defaultLayout from '../templates/default-layout.json'
 
 interface Emits {
   (e: 'switch-to-layout'): void
@@ -178,11 +177,8 @@ const keyCount = computed(() => {
   }
 })
 
-// 初期化時にデフォルトレイアウトを読み込む
+// 初期化時にJSONテキストをストアから読み込む
 onMounted(() => {
-  // デフォルトレイアウトをストアに適用
-  store.loadLayout(defaultLayout as KeyboardLayout)
-  // JSONテキストを初期化
   loadFromStore()
 })
 

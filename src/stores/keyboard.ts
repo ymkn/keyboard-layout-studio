@@ -2,6 +2,26 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Key, KeyboardLayout } from '../types/keyboard'
 import type { StorageSource, GitHubAuth } from '../types/github'
+import { getPresets } from '../services/presets'
+
+// 初期レイアウトとしてNumpadプリセットを取得
+function getInitialLayout(): KeyboardLayout {
+  const presets = getPresets()
+  const numpad = presets.find(p => p.id === 'numpad')
+  if (numpad) {
+    return structuredClone(numpad.layout)
+  }
+  // フォールバック
+  return {
+    name: 'Untitled Layout',
+    keys: [],
+    layerCount: 1,
+    metadata: {
+      created: new Date().toISOString(),
+      modified: new Date().toISOString()
+    }
+  }
+}
 
 export type DisplayMode = 'legend' | 'matrix'
 export type KeyboardLayoutType = 'ANSI' | 'JIS'
@@ -10,15 +30,7 @@ const GITHUB_AUTH_KEY = 'kls-github-auth'
 
 export const useKeyboardStore = defineStore('keyboard', () => {
   // State
-  const layout = ref<KeyboardLayout>({
-    name: 'Untitled Layout',
-    keys: [],
-    layerCount: 1,
-    metadata: {
-      created: new Date().toISOString(),
-      modified: new Date().toISOString()
-    }
-  })
+  const layout = ref<KeyboardLayout>(getInitialLayout())
 
   const selectedKeyIds = ref<string[]>([])
   const displayMode = ref<DisplayMode>('matrix')

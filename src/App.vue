@@ -163,6 +163,7 @@
       :error="layoutListError"
       :is-logged-in="store.isLoggedIn"
       @select="handleLayoutSelect"
+      @select-preset="handlePresetSelect"
       @delete="handleDeleteRequest"
       @cancel="showLayoutListDialog = false"
       @login="showLayoutListDialog = false; showGitHubLoginDialog = true"
@@ -226,6 +227,7 @@ import GitHubLoginDialog from './components/GitHubLoginDialog.vue'
 import GitHubUserBadge from './components/GitHubUserBadge.vue'
 import { useKeyboardStore } from './stores/keyboard'
 import { GitHubService, filterKLSGists, getGitHubErrorMessage, exchangeCodeForToken } from './services/github'
+import type { PresetInfo } from './services/presets'
 import type { KeyboardLayout } from './types/keyboard'
 import type { SavedLayoutItem } from './types/github'
 
@@ -419,6 +421,13 @@ function handleLayoutSelect(item: SavedLayoutItem) {
 
   // 履歴がない場合は直接ロード
   loadLayoutFromSource(item)
+}
+
+function handlePresetSelect(preset: PresetInfo) {
+  store.loadLayout(preset.layout)
+  store.clearLayoutSource()
+  showLayoutListDialog.value = false
+  activeTab.value = 'layout'
 }
 
 async function loadLayoutFromSource(item: SavedLayoutItem) {
