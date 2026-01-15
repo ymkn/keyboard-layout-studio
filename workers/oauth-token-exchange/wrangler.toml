@@ -1,0 +1,11 @@
+# 本番環境（デフォルト）
+# デプロイ: npx wrangler deploy
+# Worker名: kls-oauth-worker
+name = "kls-oauth-worker"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+# 開発環境
+# デプロイ: npx wrangler deploy --env development
+# Worker名: kls-oauth-worker-development（自動生成）
+[env.development]

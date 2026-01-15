@@ -1,9 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Key, KeyboardLayout } from '../types/keyboard'
+import type { StorageSource, GitHubAuth } from '../types/github'
 
 export type DisplayMode = 'legend' | 'matrix'
 export type KeyboardLayoutType = 'ANSI' | 'JIS'
+
+const GITHUB_AUTH_KEY = 'kls-github-auth'
 
 export const useKeyboardStore = defineStore('keyboard', () => {
   // State
@@ -28,6 +31,17 @@ export const useKeyboardStore = defineStore('keyboard', () => {
   const historyIndex = ref<number>(-1)
   const MAX_HISTORY = 20
 
+  // Layout source tracking
+  const layoutSource = ref<StorageSource>('new')
+  const layoutGistId = ref<string | null>(null)
+  const layoutGistFileKey = ref<string | null>(null)
+
+  // Save destination (user-selectable, 'local' or 'gist')
+  const saveDestination = ref<'local' | 'gist'>('local')
+
+  // GitHub authentication
+  const githubAuth = ref<GitHubAuth | null>(null)
+
   // Getters
   const selectedKey = computed(() => {
     if (selectedKeyIds.value.length !== 1) return null
@@ -42,6 +56,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
   const canUndo = computed(() => historyIndex.value > 0)
   const canRedo = computed(() => historyIndex.value < history.value.length - 1)
+  const isLoggedIn = computed(() => githubAuth.value !== null)
 
   // Internal helper: Deep clone layout
   function cloneLayout(layout: KeyboardLayout): KeyboardLayout {
@@ -423,6 +438,11 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     selectedKeyIds.value = []
     currentLayer.value = 0
 
+    // ソースを「新規」に設定
+    layoutSource.value = 'new'
+    layoutGistId.value = null
+    layoutGistFileKey.value = null
+
     // 履歴をクリアして現在の状態を保存
     history.value = []
     historyIndex.value = -1
@@ -431,6 +451,59 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
   function setKeyboardLayout(layoutType: KeyboardLayoutType) {
     keyboardLayout.value = layoutType
+  }
+
+  // Layout source tracking
+  function setLayoutSource(source: StorageSource, gistId?: string, fileKey?: string) {
+    layoutSource.value = source
+    layoutGistId.value = gistId || null
+    layoutGistFileKey.value = fileKey || null
+    // ソースに応じて保存先も連動
+    if (source === 'local' || source === 'gist') {
+      saveDestination.value = source
+    }
+  }
+
+  function clearLayoutSource() {
+    layoutSource.value = 'local'
+    layoutGistId.value = null
+    layoutGistFileKey.value = null
+    saveDestination.value = 'local'
+  }
+
+  function setSaveDestination(dest: 'local' | 'gist') {
+    saveDestination.value = dest
+  }
+
+  // GitHub authentication
+  function setGitHubAuth(auth: GitHubAuth | null) {
+    githubAuth.value = auth
+    if (auth) {
+      localStorage.setItem(GITHUB_AUTH_KEY, JSON.stringify(auth))
+    } else {
+      localStorage.removeItem(GITHUB_AUTH_KEY)
+    }
+  }
+
+  function loadGitHubAuth() {
+    const stored = localStorage.getItem(GITHUB_AUTH_KEY)
+    if (stored) {
+      try {
+        githubAuth.value = JSON.parse(stored)
+      } catch {
+        githubAuth.value = null
+      }
+    }
+  }
+
+  function logoutGitHub() {
+    setGitHubAuth(null)
+    // Gistから読み込んだレイアウトの場合、ソースをローカルに変更
+    if (layoutSource.value === 'gist') {
+      clearLayoutSource()
+    }
+    // 保存先もローカルに
+    saveDestination.value = 'local'
   }
 
   return {
@@ -447,6 +520,12 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     historyIndex,
     canUndo,
     canRedo,
+    isLoggedIn,
+    layoutSource,
+    layoutGistId,
+    layoutGistFileKey,
+    saveDestination,
+    githubAuth,
     selectKey,
     toggleKeySelection,
     selectMultipleKeys,
@@ -468,6 +547,12 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     decrementLayerCount,
     undo,
     redo,
-    createNewLayout
+    createNewLayout,
+    setLayoutSource,
+    clearLayoutSource,
+    setSaveDestination,
+    setGitHubAuth,
+    loadGitHubAuth,
+    logoutGitHub
   }
 })
