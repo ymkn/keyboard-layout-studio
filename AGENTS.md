@@ -54,10 +54,21 @@ See `doc/WORKERS_DEPLOY.md` for detailed deployment instructions.
 
 ### Pinia Stores
 
+**Store Architecture**:
+ストアは責務ごとに分割されている:
+- `layout.ts` - 永続化対象のレイアウトデータとキー操作
+- `editor.ts` - 選択状態、表示モード、クリップボード（セッション限定）
+- `history.ts` - Undo/Redo履歴（セッション限定）
+- `auth.ts` - GitHub認証、ソース/保存先管理
+- `keyboard.ts` - 統合ファサード（後方互換性のため既存APIを維持）
+
+新規コードでは個別のストアを直接使用することを推奨。
+
+**Store Patterns**:
 - Use `defineStore` with Setup Store syntax (returns object from function)
 - Define state first, then computed getters, then actions
 - Use `ref` for mutable state, `computed` for getters
-- All actions that modify state must call `saveHistory()` for undo/redo
+- layoutStoreの変更はhistoryStoreで自動的に履歴保存される（コールバック経由）
 - Group related actions together (selection, editing, history)
 
 ### TypeScript
@@ -120,18 +131,37 @@ import KeyComponent from './KeyComponent.vue'
 ```
 src/
 ├── components/      # Vue components (.vue files)
-├── stores/          # Pinia stores (single store per file)
+├── composables/     # Reusable Vue composition functions
+│   ├── useDragSelection.ts      # ドラッグ矩形選択
+│   ├── useKeyboardShortcuts.ts  # キーボードショートカット（Map-based）
+│   ├── useKeyPropertyFields.ts  # プロパティフィールドのバリデーション
+│   └── useToast.ts              # トースト通知（シングルトン）
+├── constants/       # Application constants (no magic numbers)
+│   ├── app-config.ts   # アプリ設定（履歴数、レイヤー上限など）
+│   ├── rendering.ts    # 描画定数（KEY_UNIT, GRID_SIZEなど）
+│   └── storage.ts      # ストレージキー定数
+├── stores/          # Pinia stores (responsibility-based split)
+│   ├── keyboard.ts  # 統合ファサード（後方互換性）
+│   ├── layout.ts    # レイアウトデータ（永続化対象）
+│   ├── editor.ts    # UI状態（セッション限定）
+│   ├── history.ts   # Undo/Redo履歴（セッション限定）
+│   └── auth.ts      # GitHub認証（LocalStorage永続化）
 ├── types/           # TypeScript interfaces and types
-│   ├── keyboard.ts  # Layout and key data types
-│   └── github.ts    # GitHub API types (Gist, auth, etc.)
+│   ├── keyboard.ts    # Layout and key data types
+│   ├── github.ts      # GitHub API types (Gist, auth, etc.)
+│   └── persistence.ts # 永続化対象 vs ランタイム状態の型区別
 ├── utils/           # Pure utility functions
+│   ├── key-sanitizer.ts  # キーのバリデーション/サニタイズ（一元管理）
+│   ├── export.ts         # QMK/Vialエクスポート
+│   └── kle-import.ts     # KLE JSONインポート
 ├── services/        # External API integrations
 │   └── github.ts    # GitHub API service (Gist CRUD, OAuth)
 ├── data/            # Static data (keycodes, labels, templates)
 └── templates/       # JSON templates for export
 
 doc/
-└── WORKERS_DEPLOY.md  # Cloudflare Workers deployment guide
+├── WORKERS_DEPLOY.md  # Cloudflare Workers deployment guide
+└── architecture.md    # Architecture documentation
 
 workers/
 └── oauth-token-exchange/  # Cloudflare Worker for OAuth
@@ -156,6 +186,8 @@ workers/
 - Store mutations go through action functions, never direct assignment
 - For nested updates, use spread operator: `{ ...obj, field: newValue }`
 - Update `metadata.modified` timestamp on all layout changes
+- **`loadLayout`時にキーの座標・サイズ、メタデータは自動でサニタイズされる**（`key-sanitizer.ts`）
+  - 不正な値は有効範囲にクランプ/切り詰め、修正があればトースト通知
 
 ### When to Create Components
 
@@ -167,10 +199,18 @@ workers/
 
 1. Read existing code to understand patterns (stores, types, components)
 2. Add types to `src/types/` if new data structures needed
-3. Add state/actions to stores in `src/stores/keyboard.ts`
-4. Create/edit components with proper imports and typing
-5. Run `npm run build` to verify TypeScript compilation
-6. Test in dev server manually (no automated tests)
+   - 永続化対象の型は `persistence.ts` で明示的に定義
+3. Add state/actions to appropriate stores:
+   - レイアウトデータ関連 → `stores/layout.ts`
+   - UI状態関連 → `stores/editor.ts`
+   - 履歴関連 → `stores/history.ts`
+   - 認証関連 → `stores/auth.ts`
+   - 統合ファサード維持 → `stores/keyboard.ts` にプロキシを追加
+4. Use constants from `src/constants/` instead of magic numbers
+5. Extract reusable logic to `src/composables/`
+6. Create/edit components with proper imports and typing
+7. Run `npm run build` to verify TypeScript compilation
+8. Test in dev server manually (no automated tests)
 
 ### GitHub Integration Notes
 

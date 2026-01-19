@@ -1,4 +1,5 @@
 import type { Gist, GitHubUser, SavedLayoutItem } from '../types/github'
+import { STORAGE_KEYS } from '../constants/storage'
 
 /**
  * GitHub連携が設定されているかチェック
@@ -145,8 +146,8 @@ export function startOAuthFlow(
     state
   })
 
-  sessionStorage.setItem('kls-oauth-state', state)
-  sessionStorage.setItem('kls-oauth-redirect-uri', redirectUri)
+  sessionStorage.setItem(STORAGE_KEYS.OAUTH_STATE, state)
+  sessionStorage.setItem(STORAGE_KEYS.OAUTH_REDIRECT_URI, redirectUri)
 
   return `${GITHUB_OAUTH_BASE}/authorize?${params.toString()}`
 }
@@ -155,7 +156,7 @@ export async function exchangeCodeForToken(
   code: string,
   workerUrl?: string
 ): Promise<{ access_token: string; scope: string; token_type: string }> {
-  const redirectUri = sessionStorage.getItem('kls-oauth-redirect-uri')
+  const redirectUri = sessionStorage.getItem(STORAGE_KEYS.OAUTH_REDIRECT_URI)
 
   if (!redirectUri) {
     throw new Error('OAuth redirect URI not found in session storage')
@@ -186,8 +187,8 @@ export async function exchangeCodeForToken(
   }
 
   // クリーンアップ
-  sessionStorage.removeItem('kls-oauth-state')
-  sessionStorage.removeItem('kls-oauth-redirect-uri')
+  sessionStorage.removeItem(STORAGE_KEYS.OAUTH_STATE)
+  sessionStorage.removeItem(STORAGE_KEYS.OAUTH_REDIRECT_URI)
 
   return response.json()
 }

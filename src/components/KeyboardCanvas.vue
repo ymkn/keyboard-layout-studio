@@ -251,34 +251,42 @@ import { ref, computed } from 'vue'
 import { useKeyboardStore } from '../stores/keyboard'
 import KeyComponent from './KeyComponent.vue'
 import ScreenshotDialog from './ScreenshotDialog.vue'
+import { RENDERING } from '../constants/rendering'
+import { useDragSelection } from '../composables/useDragSelection'
+import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 
 const store = useKeyboardStore()
+
+// キーボードショートカット
+const { handleKeyDown } = useKeyboardShortcuts(
+  {
+    undo: () => store.undo(),
+    redo: () => store.redo(),
+    moveSelectedKeys: (dx, dy) => store.moveSelectedKeys(dx, dy),
+    resizeSelectedKeys: (dw, dh) => store.resizeSelectedKeys(dw, dh),
+    deleteSelectedKeys: () => store.deleteSelectedKeys(),
+    copySelectedKeys: () => store.copySelectedKeys(),
+    pasteKeys: () => store.pasteKeys(),
+    rotateSelectedKeys: (angle) => store.rotateSelectedKeys(angle)
+  },
+  () => store.selectedKeyIds.length > 0
+)
 const containerRef = ref<HTMLElement | null>(null)
 const showScreenshotDialog = ref(false)
 
 // 定数
-const keyUnit = 54 // 1uのピクセルサイズ
-const gridSize = 0.25 // グリッドサイズ（u単位）
-const margin = 0.25 // マージン（u単位）
+const keyUnit = RENDERING.KEY_UNIT
+const gridSize = RENDERING.GRID_SIZE
+const margin = RENDERING.GRID_SIZE
 
-// ドラッグ選択用の状態
-const isDragging = ref(false)
-const dragStartX = ref(0)
-const dragStartY = ref(0)
-const dragEndX = ref(0)
-const dragEndY = ref(0)
-const justFinishedDrag = ref(false) // ドラッグ直後のclickイベントをスキップするためのフラグ
-
-const selectionRect = computed(() => {
-  if (!isDragging.value) return null
-
-  const x = Math.min(dragStartX.value, dragEndX.value)
-  const y = Math.min(dragStartY.value, dragEndY.value)
-  const width = Math.abs(dragEndX.value - dragStartX.value)
-  const height = Math.abs(dragEndY.value - dragStartY.value)
-
-  return { x, y, width, height }
-})
+// ドラッグ選択機能
+const {
+  selectionRect,
+  justFinishedDrag,
+  handleMouseDown: onDragStart,
+  handleMouseMove: onDragMove,
+  handleMouseUp: onDragEnd
+} = useDragSelection()
 
 // SVGのサイズを計算（マージンを含む）
 const gridWidth = computed(() => {
@@ -328,79 +336,30 @@ function handleCanvasClick(_event: MouseEvent) {
 
 // ドラッグ選択開始
 function handleMouseDown(event: MouseEvent) {
-  const svg = event.currentTarget as SVGSVGElement
-  const pt = svg.createSVGPoint()
-  pt.x = event.clientX
-  pt.y = event.clientY
-  const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse())
-
-  // マージンを考慮した座標
-  const adjustedX = svgP.x - marginPixels.value
-  const adjustedY = svgP.y - marginPixels.value
-
-  isDragging.value = true
-  dragStartX.value = adjustedX
-  dragStartY.value = adjustedY
-  dragEndX.value = adjustedX
-  dragEndY.value = adjustedY
+  onDragStart(event, marginPixels.value)
 }
 
 // ドラッグ中
 function handleMouseMove(event: MouseEvent) {
-  if (!isDragging.value) return
-
-  const svg = event.currentTarget as SVGSVGElement
-  const pt = svg.createSVGPoint()
-  pt.x = event.clientX
-  pt.y = event.clientY
-  const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse())
-
-  // マージンを考慮した座標
-  dragEndX.value = svgP.x - marginPixels.value
-  dragEndY.value = svgP.y - marginPixels.value
+  onDragMove(event, marginPixels.value)
 }
 
 // ドラッグ終了
 function handleMouseUp(_event: MouseEvent) {
-  if (!isDragging.value) return
+  // キーの境界情報を渡す
+  const keyBounds = store.keys.map(key => ({
+    id: key.id,
+    x: key.x,
+    y: key.y,
+    width: key.width,
+    height: key.height
+  }))
 
-  const rect = selectionRect.value
-  let didSelectKeys = false
+  const selectedIds = onDragEnd(keyBounds)
 
-  // 最小限の動きがあった場合のみ選択（クリックと区別）
-  if (rect && (rect.width > 1 || rect.height > 1)) {
-    // 矩形内にあるキーを選択
-    const selectedIds: string[] = []
-
-    for (const key of store.keys) {
-      const keyX = key.x * keyUnit
-      const keyY = key.y * keyUnit
-      const keyWidth = key.width * keyUnit
-      const keyHeight = key.height * keyUnit
-
-      // キーが矩形と交差しているかチェック（一部でも重なっていればOK）
-      if (
-        keyX < rect.x + rect.width &&
-        keyX + keyWidth > rect.x &&
-        keyY < rect.y + rect.height &&
-        keyY + keyHeight > rect.y
-      ) {
-        selectedIds.push(key.id)
-      }
-    }
-
-    // 選択されたキーがあれば適用
-    if (selectedIds.length > 0) {
-      store.selectMultipleKeys(selectedIds)
-      didSelectKeys = true
-    }
-  }
-
-  isDragging.value = false
-
-  // ドラッグ選択が行われた場合、直後のclickイベントをスキップするためにフラグを立てる
-  if (didSelectKeys) {
-    justFinishedDrag.value = true
+  // 選択されたキーがあれば適用
+  if (selectedIds.length > 0) {
+    store.selectMultipleKeys(selectedIds)
   }
 }
 
@@ -408,102 +367,9 @@ function handleMouseUp(_event: MouseEvent) {
 function handleDecrementLayer() {
   if (store.layout.layerCount <= 1) return
 
-  const layerToDelete = store.layout.layerCount - 1
-  const hasKeycodes = store.keys.some(key => key.keycodes?.[layerToDelete])
-
-  let message = `レイヤー ${layerToDelete} を削除しますか？`
-  if (hasKeycodes) {
-    message += `\n\nこのレイヤーにはキーコードが設定されています。削除すると元に戻せません。`
-  }
-
-  if (confirm(message)) {
-    store.decrementLayerCount()
-  }
+  store.decrementLayerCount(store.currentLayer)
 }
 
-// キーボード操作
-function handleKeyDown(event: KeyboardEvent) {
-  // Ctrl+Z でundo（選択状態に関係なく有効）
-  if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
-    event.preventDefault()
-    store.undo()
-    return
-  }
-
-  // Ctrl+Y または Ctrl+Shift+Z でredo（選択状態に関係なく有効）
-  if ((event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))) {
-    event.preventDefault()
-    store.redo()
-    return
-  }
-
-  if (store.selectedKeyIds.length === 0) return
-
-  const step = 0.25 // 移動・サイズ変更の単位
-
-  // カーソルキーでの移動（複数選択対応）
-  if (event.key.startsWith('Arrow') && !event.shiftKey) {
-    event.preventDefault()
-    switch (event.key) {
-      case 'ArrowUp':
-        store.moveSelectedKeys(0, -step)
-        break
-      case 'ArrowDown':
-        store.moveSelectedKeys(0, step)
-        break
-      case 'ArrowLeft':
-        store.moveSelectedKeys(-step, 0)
-        break
-      case 'ArrowRight':
-        store.moveSelectedKeys(step, 0)
-        break
-    }
-  }
-
-  // Shift + カーソルキーでのサイズ変更（複数選択対応）
-  if (event.key.startsWith('Arrow') && event.shiftKey) {
-    event.preventDefault()
-    switch (event.key) {
-      case 'ArrowUp':
-        store.resizeSelectedKeys(0, -step)
-        break
-      case 'ArrowDown':
-        store.resizeSelectedKeys(0, step)
-        break
-      case 'ArrowLeft':
-        store.resizeSelectedKeys(-step, 0)
-        break
-      case 'ArrowRight':
-        store.resizeSelectedKeys(step, 0)
-        break
-    }
-  }
-
-  // Deleteキーで選択中のキーを削除
-  if (event.key === 'Delete' || event.key === 'Backspace') {
-    event.preventDefault()
-    store.deleteSelectedKeys()
-  }
-
-  // Ctrl+C で選択中のキーをコピー
-  if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
-    event.preventDefault()
-    store.copySelectedKeys()
-  }
-
-  // Ctrl+V でペースト
-  if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
-    event.preventDefault()
-    store.pasteKeys()
-  }
-
-  // R で回転（+3度）、Shift+R で逆回転（-3度）
-  if (event.key === 'r' || event.key === 'R') {
-    event.preventDefault()
-    const angle = event.shiftKey ? -3 : 3
-    store.rotateSelectedKeys(angle)
-  }
-}
 </script>
 
 <style scoped>

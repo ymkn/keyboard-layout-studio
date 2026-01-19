@@ -3,6 +3,34 @@ import qmkTemplate from '../templates/qmk-keyboard-template.json'
 import vialTemplate from '../templates/vial-template.json'
 
 /**
+ * QMKレイアウトのキー形式
+ */
+interface QMKLayoutKey {
+  x: number
+  y: number
+  w?: number
+  h?: number
+  matrix?: [number, number]
+}
+
+/**
+ * Vialレイアウトのメタデータ形式
+ */
+interface VialKeyMetadata {
+  x?: number
+  w?: number
+  h?: number
+  w2?: number
+  h2?: number
+  x2?: number
+}
+
+/**
+ * Vialレイアウトの行要素（メタデータまたはマトリクス文字列）
+ */
+type VialRowElement = VialKeyMetadata | string
+
+/**
  * QMK keyboard.json形式にエクスポート
  */
 export function exportToQMK(layout: KeyboardLayout): string {
@@ -66,8 +94,8 @@ export function exportToVial(layout: KeyboardLayout): string {
 /**
  * KeyをQMKのレイアウト形式に変換
  */
-function convertToQMKLayout(key: Key) {
-  const qmkKey: any = {
+function convertToQMKLayout(key: Key): QMKLayoutKey {
+  const qmkKey: QMKLayoutKey = {
     x: key.x,
     y: key.y
   }
@@ -92,7 +120,7 @@ function convertToQMKLayout(key: Key) {
  * KeysをVialのレイアウト形式に変換
  * Vialは"row,col"形式の文字列とKLE形式のメタデータを使用
  */
-function convertToVialLayout(keys: Key[]) {
+function convertToVialLayout(keys: Key[]): VialRowElement[][] {
   // y座標でグループ化して行に分ける
   const rowMap = new Map<number, Key[]>()
 
@@ -108,10 +136,10 @@ function convertToVialLayout(keys: Key[]) {
     .map(([_, rowKeys]) => rowKeys.sort((a, b) => a.x - b.x))
 
   // 各行を変換
-  const vialLayout: any[][] = []
+  const vialLayout: VialRowElement[][] = []
 
   sortedRows.forEach(rowKeys => {
-    const row: any[] = []
+    const row: VialRowElement[] = []
     let lastX = 0
 
     rowKeys.forEach(key => {
@@ -124,7 +152,7 @@ function convertToVialLayout(keys: Key[]) {
       const xGap = key.x - lastX
 
       // メタデータオブジェクトを作成（デフォルト値以外のみ）
-      const metadata: any = {}
+      const metadata: VialKeyMetadata = {}
 
       // ISO Enterなどの特殊形状の場合
       if (key.shape === 'iso-enter') {

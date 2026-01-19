@@ -202,15 +202,15 @@
       @cancel="showGitHubLoginDialog = false"
     />
 
-    <!-- 保存成功通知 -->
+    <!-- トースト通知 -->
     <div
-      v-if="showSaveNotification"
+      v-if="toast.isVisible.value"
       :class="[
         'fixed top-20 right-4 text-white px-6 py-3 rounded shadow-lg z-50',
-        notificationType === 'success' ? 'bg-green-600' : 'bg-red-600'
+        toast.type.value === 'success' ? 'bg-green-600' : 'bg-red-600'
       ]"
     >
-      {{ notificationMessage }}
+      {{ toast.message.value }}
     </div>
   </div>
 </template>
@@ -226,7 +226,9 @@ import AboutDialog from './components/AboutDialog.vue'
 import GitHubLoginDialog from './components/GitHubLoginDialog.vue'
 import GitHubUserBadge from './components/GitHubUserBadge.vue'
 import { useKeyboardStore } from './stores/keyboard'
+import { useToast } from './composables/useToast'
 import { GitHubService, filterKLSGists, getGitHubErrorMessage, exchangeCodeForToken } from './services/github'
+import { STORAGE_KEYS } from './constants/storage'
 import type { PresetInfo } from './services/presets'
 import type { KeyboardLayout } from './types/keyboard'
 import type { SavedLayoutItem } from './types/github'
@@ -235,6 +237,7 @@ import type { SavedLayoutItem } from './types/github'
 const appVersion = __APP_VERSION__
 
 const store = useKeyboardStore()
+const toast = useToast()
 
 const activeTab = ref<'layout' | 'json'>('layout')
 const showNewLayoutDialog = ref(false)
@@ -254,15 +257,8 @@ const layoutToDelete = ref<SavedLayoutItem | null>(null)
 const showOpenConfirmDialog = ref(false)
 const pendingLayoutToOpen = ref<SavedLayoutItem | null>(null)
 
-// 通知
-const showSaveNotification = ref(false)
-const notificationMessage = ref('保存しました')
-const notificationType = ref<'success' | 'error'>('success')
-
 // GitHub認証関連
 const showGitHubLoginDialog = ref(false)
-
-const STORAGE_PREFIX = 'kls-layout-'
 
 function switchToJsonTab() {
   activeTab.value = 'json'
@@ -287,7 +283,7 @@ async function handleOAuthCallback(): Promise<void> {
   const errorDescription = urlParams.get('error_description')
   
   if (error) {
-    showNotification(`GitHub認証エラー: ${errorDescription || error}`, 'error')
+    toast.showToast(`GitHub認証エラー: ${errorDescription || error}`, 'error')
     window.history.replaceState({}, '', window.location.pathname)
     return
   }
@@ -296,7 +292,7 @@ async function handleOAuthCallback(): Promise<void> {
   
   const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID
   if (!clientId) {
-    showNotification('VITE_GITHUB_CLIENT_IDが設定されていません', 'error')
+    toast.showToast('VITE_GITHUB_CLIENT_IDが設定されていません', 'error')
     window.history.replaceState({}, '', window.location.pathname)
     return
   }
@@ -312,9 +308,9 @@ async function handleOAuthCallback(): Promise<void> {
       avatarUrl: user.avatar_url
     })
     
-    showNotification(`${user.login}として認証されました`, 'success')
+    toast.showToast(`${user.login}として認証されました`, 'success')
   } catch (error) {
-    showNotification(`認証エラー: ${getGitHubErrorMessage(error)}`, 'error')
+    toast.showToast(`認証エラー: ${getGitHubErrorMessage(error)}`, 'error')
   } finally {
     window.history.replaceState({}, '', window.location.pathname)
   }
@@ -330,16 +326,6 @@ function handleGitHubLogout() {
   store.logoutGitHub()
 }
 
-// 通知表示ヘルパー
-function showNotification(message: string, type: 'success' | 'error' = 'success') {
-  notificationMessage.value = message
-  notificationType.value = type
-  showSaveNotification.value = true
-  setTimeout(() => {
-    showSaveNotification.value = false
-  }, 3000)
-}
-
 function handleNewLayout() {
   store.createNewLayout()
   showNewLayoutDialog.value = false
@@ -353,7 +339,7 @@ function getLocalLayouts(): SavedLayoutItem[] {
 
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i)
-    if (key && key.startsWith(STORAGE_PREFIX)) {
+    if (key && key.startsWith(STORAGE_KEYS.LAYOUT_PREFIX)) {
       const content = localStorage.getItem(key)
       if (content) {
         try {
@@ -396,6 +382,7 @@ async function handleOpenLayout() {
       } catch (e) {
         // Gist取得エラーは警告として表示し、ローカルのみ表示
         console.warn('Gist取得エラー:', e)
+        layoutListError.value = 'Gistの取得に失敗しました。ローカル保存のみ表示しています。'
       }
     }
 
@@ -424,14 +411,19 @@ function handleLayoutSelect(item: SavedLayoutItem) {
 }
 
 function handlePresetSelect(preset: PresetInfo) {
-  store.loadLayout(preset.layout)
+  const hasCorrectedValues = store.loadLayout(preset.layout)
   store.clearLayoutSource()
   showLayoutListDialog.value = false
   activeTab.value = 'layout'
+  if (hasCorrectedValues) {
+    toast.showToast('一部の値が自動修正されました', 'success')
+  }
 }
 
 async function loadLayoutFromSource(item: SavedLayoutItem) {
   try {
+    let hasCorrectedValues = false
+
     if (item.source === 'local') {
       // ローカルストレージから読み込み
       const content = localStorage.getItem(item.id)
@@ -441,7 +433,7 @@ async function loadLayoutFromSource(item: SavedLayoutItem) {
       }
 
       const layout = JSON.parse(content) as KeyboardLayout
-      store.loadLayout(layout)
+      hasCorrectedValues = store.loadLayout(layout)
       store.setLayoutSource('local')
     } else {
       // Gistから読み込み
@@ -465,12 +457,16 @@ async function loadLayoutFromSource(item: SavedLayoutItem) {
       }
 
       const layout = JSON.parse(content) as KeyboardLayout
-      store.loadLayout(layout)
+      hasCorrectedValues = store.loadLayout(layout)
       store.setLayoutSource('gist', item.id, fileKey)
     }
 
     showLayoutListDialog.value = false
     activeTab.value = 'layout'
+
+    if (hasCorrectedValues) {
+      toast.showToast('一部の値が自動修正されました', 'success')
+    }
   } catch (error) {
     alert('レイアウトの読み込みに失敗しました')
     console.error(error)
@@ -562,13 +558,13 @@ async function handleSaveLayout() {
         )
         store.setLayoutSource('gist', gist.id, filename)
       }
-      showNotification('Gistに保存しました')
+      toast.showToast('Gistに保存しました')
     } else {
       // ローカルストレージに保存
-      const key = STORAGE_PREFIX + (store.layout.name || 'untitled')
+      const key = STORAGE_KEYS.LAYOUT_PREFIX + (store.layout.name || 'untitled')
       localStorage.setItem(key, content)
       store.setLayoutSource('local')
-      showNotification('保存しました')
+      toast.showToast('保存しました')
     }
   } catch (error) {
     alert('保存に失敗しました: ' + getGitHubErrorMessage(error))

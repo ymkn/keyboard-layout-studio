@@ -163,6 +163,8 @@
               type="number"
               :value="store.selectedKey.x"
               @input="updateX"
+              @focus="saveValidValue('x')"
+              @blur="validateField('x', $event)"
               @keydown.enter="handleEnterKey('x')"
               step="0.25"
               min="0"
@@ -176,6 +178,8 @@
               type="number"
               :value="store.selectedKey.y"
               @input="updateY"
+              @focus="saveValidValue('y')"
+              @blur="validateField('y', $event)"
               @keydown.enter="handleEnterKey('y')"
               step="0.25"
               min="0"
@@ -196,6 +200,8 @@
               type="number"
               :value="store.selectedKey.width"
               @input="updateWidth"
+              @focus="saveValidValue('width')"
+              @blur="validateField('width', $event)"
               @keydown.enter="handleEnterKey('width')"
               step="0.25"
               min="0.25"
@@ -213,6 +219,8 @@
               type="number"
               :value="store.selectedKey.height"
               @input="updateHeight"
+              @focus="saveValidValue('height')"
+              @blur="validateField('height', $event)"
               @keydown.enter="handleEnterKey('height')"
               step="0.25"
               min="0.25"
@@ -238,6 +246,8 @@
             type="number"
             :value="store.selectedKey.rotation || 0"
             @input="updateRotation"
+            @focus="saveValidValue('rotation')"
+            @blur="validateField('rotation', $event)"
             @keydown.enter="handleEnterKey('rotation')"
             step="3"
             class="flex-1 px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-sm"
@@ -258,6 +268,8 @@
               type="text"
               :value="store.selectedKey.legend.topLeft"
               @input="updateLegend('topLeft', $event)"
+              @focus="saveValidValue('topLeft')"
+              @blur="validateField('topLeft', $event)"
               @keydown.enter="handleEnterKey('topLeft')"
               placeholder="左上"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
@@ -268,6 +280,8 @@
               type="text"
               :value="store.selectedKey.legend.topCenter"
               @input="updateLegend('topCenter', $event)"
+              @focus="saveValidValue('topCenter')"
+              @blur="validateField('topCenter', $event)"
               @keydown.enter="handleEnterKey('topCenter')"
               placeholder="中上"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
@@ -278,6 +292,8 @@
               type="text"
               :value="store.selectedKey.legend.topRight"
               @input="updateLegend('topRight', $event)"
+              @focus="saveValidValue('topRight')"
+              @blur="validateField('topRight', $event)"
               @keydown.enter="handleEnterKey('topRight')"
               placeholder="右上"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
@@ -292,6 +308,8 @@
               type="text"
               :value="store.selectedKey.legend.centerLeft"
               @input="updateLegend('centerLeft', $event)"
+              @focus="saveValidValue('centerLeft')"
+              @blur="validateField('centerLeft', $event)"
               @keydown.enter="handleEnterKey('centerLeft')"
               placeholder="左中"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
@@ -302,6 +320,8 @@
               type="text"
               :value="store.selectedKey.legend.center"
               @input="updateLegend('center', $event)"
+              @focus="saveValidValue('center')"
+              @blur="validateField('center', $event)"
               @keydown.enter="handleEnterKey('center')"
               placeholder="中央"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs font-semibold"
@@ -312,6 +332,8 @@
               type="text"
               :value="store.selectedKey.legend.centerRight"
               @input="updateLegend('centerRight', $event)"
+              @focus="saveValidValue('centerRight')"
+              @blur="validateField('centerRight', $event)"
               @keydown.enter="handleEnterKey('centerRight')"
               placeholder="右中"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
@@ -326,6 +348,8 @@
               type="text"
               :value="store.selectedKey.legend.bottomLeft"
               @input="updateLegend('bottomLeft', $event)"
+              @focus="saveValidValue('bottomLeft')"
+              @blur="validateField('bottomLeft', $event)"
               @keydown.enter="handleEnterKey('bottomLeft')"
               placeholder="左下"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
@@ -336,6 +360,8 @@
               type="text"
               :value="store.selectedKey.legend.bottomCenter"
               @input="updateLegend('bottomCenter', $event)"
+              @focus="saveValidValue('bottomCenter')"
+              @blur="validateField('bottomCenter', $event)"
               @keydown.enter="handleEnterKey('bottomCenter')"
               placeholder="中下"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
@@ -346,6 +372,8 @@
               type="text"
               :value="store.selectedKey.legend.bottomRight"
               @input="updateLegend('bottomRight', $event)"
+              @focus="saveValidValue('bottomRight')"
+              @blur="validateField('bottomRight', $event)"
               @keydown.enter="handleEnterKey('bottomRight')"
               placeholder="右下"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
@@ -430,6 +458,15 @@ import { getKeycodeLabel } from '../data/keycodes'
 import { SHAPE_PRESETS } from '../data/shape-presets'
 import type { KeyShape, LegendFont } from '../types/keyboard'
 import KeycodePickerDialog from './KeycodePickerDialog.vue'
+import {
+  processNumericField,
+  processTextField,
+  getNumericFieldUpdate,
+  getMatrixFieldUpdate,
+  getLegendFieldUpdate,
+  getKeycodeFieldUpdate,
+  isLegendField
+} from '../composables/useKeyPropertyFields'
 
 // Propsの定義
 const props = defineProps<{
@@ -441,6 +478,12 @@ const showKeycodeDialog = ref(false)
 
 // 各入力欄のref（動的ref）
 const inputRefs = ref<Record<string, HTMLInputElement | null>>({})
+
+// Enterキーが押されたかどうかのフラグ（blurイベントとの競合回避用）
+const isEnterPressed = ref(false)
+
+// フォーカスイン時の有効な値を保存（バリデーションエラー時に復元用）
+const lastValidValues = ref<Record<string, string>>({})
 
 // メタデータ編集用
 const title = ref('')
@@ -569,97 +612,132 @@ function setInputRef(el: unknown, key: string) {
   }
 }
 
-function updateX(event: Event) {
-  const value = parseFloat((event.target as HTMLInputElement).value)
-  if (!isNaN(value) && store.selectedKey) {
-    // マイナス値は0に制限
-    store.updateKey(store.selectedKey.id, { x: Math.max(0, value) })
+/**
+ * 数値フィールドの汎用更新関数
+ */
+function updateNumericField(fieldName: string, event: Event) {
+  if (!store.selectedKey) return
+
+  const rawValue = (event.target as HTMLInputElement).value
+  const update = getNumericFieldUpdate(fieldName, rawValue)
+
+  if (update) {
+    store.updateKey(store.selectedKey.id, update)
   }
+}
+
+function updateX(event: Event) {
+  updateNumericField('x', event)
 }
 
 function updateY(event: Event) {
-  const value = parseFloat((event.target as HTMLInputElement).value)
-  if (!isNaN(value) && store.selectedKey) {
-    // マイナス値は0に制限
-    store.updateKey(store.selectedKey.id, { y: Math.max(0, value) })
-  }
+  updateNumericField('y', event)
 }
 
 function updateWidth(event: Event) {
-  const value = parseFloat((event.target as HTMLInputElement).value)
-  if (!isNaN(value) && value >= 0.25 && store.selectedKey) {
-    store.updateKey(store.selectedKey.id, { width: value })
-  }
+  updateNumericField('width', event)
 }
 
 function updateHeight(event: Event) {
-  const value = parseFloat((event.target as HTMLInputElement).value)
-  if (!isNaN(value) && value >= 0.25 && store.selectedKey) {
-    store.updateKey(store.selectedKey.id, { height: value })
-  }
+  updateNumericField('height', event)
 }
 
 function updateRotation(event: Event) {
-  const value = parseFloat((event.target as HTMLInputElement).value)
-  if (!isNaN(value) && store.selectedKey) {
-    // 角度を-180〜180の範囲に正規化
-    let normalizedValue = value
-    while (normalizedValue > 180) normalizedValue -= 360
-    while (normalizedValue <= -180) normalizedValue += 360
-    store.updateKey(store.selectedKey.id, { rotation: normalizedValue })
-  }
+  updateNumericField('rotation', event)
 }
 
 function updateLegend(position: string, event: Event) {
+  if (!store.selectedKey) return
+
   const value = (event.target as HTMLInputElement).value
-  if (store.selectedKey) {
-    store.updateKey(store.selectedKey.id, {
-      legend: {
-        ...store.selectedKey.legend,
-        [position]: value || undefined
-      }
-    })
+  const update = getLegendFieldUpdate(
+    store.selectedKey.legend,
+    position as keyof typeof store.selectedKey.legend,
+    value
+  )
+  if (update) {
+    store.updateKey(store.selectedKey.id, update)
   }
 }
 
 function updateMatrix(field: 'row' | 'col', event: Event) {
-  const value = parseInt((event.target as HTMLInputElement).value)
-  if (store.selectedKey) {
-    store.updateKey(store.selectedKey.id, {
-      matrix: {
-        ...store.selectedKey.matrix,
-        [field]: isNaN(value) ? undefined : value
-      }
-    })
-  }
+  if (!store.selectedKey) return
+
+  const rawValue = (event.target as HTMLInputElement).value
+  const update = getMatrixFieldUpdate(store.selectedKey.matrix, field, rawValue)
+  store.updateKey(store.selectedKey.id, update)
 }
 
 function updateKeycode(event: Event) {
+  if (!store.selectedKey) return
+
   const value = (event.target as HTMLInputElement).value
-  if (store.selectedKey) {
-    const newKeycodes = { ...store.selectedKey.keycodes }
-    if (value) {
-      newKeycodes[store.currentLayer] = value
-    } else {
-      delete newKeycodes[store.currentLayer]
-    }
-    store.updateKey(store.selectedKey.id, {
-      keycodes: newKeycodes
-    })
-  }
+  const update = getKeycodeFieldUpdate(store.selectedKey.keycodes, store.currentLayer, value)
+  store.updateKey(store.selectedKey.id, update)
 }
 
 function onKeycodeSelect(keycode: string) {
-  if (store.selectedKey) {
-    const newKeycodes = { ...store.selectedKey.keycodes }
-    if (keycode) {
-      newKeycodes[store.currentLayer] = keycode
-    } else {
-      delete newKeycodes[store.currentLayer]
+  if (!store.selectedKey) return
+
+  const update = getKeycodeFieldUpdate(store.selectedKey.keycodes, store.currentLayer, keycode)
+  store.updateKey(store.selectedKey.id, update)
+}
+
+// フォーカスイン時に有効な値を保存
+function saveValidValue(fieldName: string) {
+  const inputElement = inputRefs.value[fieldName]
+  if (!inputElement) return
+  lastValidValues.value[fieldName] = inputElement.value
+}
+
+// フィールドのバリデーションを実行
+function validateField(fieldName: string, event: FocusEvent) {
+  // Enterキーが押された場合は、blurイベントでのバリデーションをスキップ
+  if (isEnterPressed.value) {
+    return
+  }
+
+  const inputElement = inputRefs.value[fieldName]
+  if (!inputElement) return
+
+  const rawValue = inputElement.value
+
+  // 数値フィールドのバリデーション
+  if (['x', 'y', 'width', 'height', 'rotation'].includes(fieldName)) {
+    const result = processNumericField(fieldName, rawValue, { showError: true })
+    // バリデーションエラーがある場合はフォーカスを維持し、値を復元
+    if (!result.isValid) {
+      event.preventDefault()
+      const lastValidValue = lastValidValues.value[fieldName]
+      // 入力欄とストア内のキーデータを両方復元
+      const update = getNumericFieldUpdate(fieldName, lastValidValue)
+      if (update && store.selectedKey) {
+        store.updateKey(store.selectedKey.id, update)
+      }
+      nextTick(() => {
+        inputElement.value = lastValidValue
+        inputElement.focus()
+      })
     }
-    store.updateKey(store.selectedKey.id, {
-      keycodes: newKeycodes
-    })
+  } else if (isLegendField(fieldName)) {
+    // レジェンドフィールドのバリデーション
+    const result = processTextField('legend', rawValue, { showError: true })
+    // バリデーションエラーがある場合はフォーカスを維持し、値を復元
+    if (!result.isValid) {
+      event.preventDefault()
+      const lastValidValue = lastValidValues.value[fieldName]
+      // 入力欄とストア内のキーデータを両方復元
+      if (store.selectedKey) {
+        const update = getLegendFieldUpdate(store.selectedKey.legend, fieldName, lastValidValue)
+        if (update) {
+          store.updateKey(store.selectedKey.id, update)
+        }
+      }
+      nextTick(() => {
+        inputElement.value = lastValidValue
+        inputElement.focus()
+      })
+    }
   }
 }
 
@@ -670,116 +748,55 @@ function handleEnterKey(fieldName: string) {
   const inputElement = inputRefs.value[fieldName]
   if (!inputElement) return
 
-  const value = inputElement.value
-
-  // フィールドタイプごとにバリデーションと更新を実行
+  const rawValue = inputElement.value
   let isValid = true
 
-  try {
-    switch (fieldName) {
-      case 'x': {
-        const numValue = parseFloat(value)
-        if (isNaN(numValue) || numValue < 0) {
-          isValid = false
-          alert('X座標は0以上の数値である必要があります')
-        } else {
-          store.updateKey(store.selectedKey.id, { x: numValue })
-        }
-        break
+  // Enterキーが押されたことをマーク
+  isEnterPressed.value = true
+
+  // フィールドタイプごとにバリデーションと更新を実行
+  if (['x', 'y', 'width', 'height', 'rotation'].includes(fieldName)) {
+    // 数値フィールド
+    const result = processNumericField(fieldName, rawValue, { showError: true })
+    if (!result.isValid) {
+      isValid = false
+      // バリデーションエラー時にストア内のキーデータも復元
+      const lastValidValue = lastValidValues.value[fieldName]
+      const update = getNumericFieldUpdate(fieldName, lastValidValue)
+      if (update) {
+        store.updateKey(store.selectedKey.id, update)
       }
-      case 'y': {
-        const numValue = parseFloat(value)
-        if (isNaN(numValue) || numValue < 0) {
-          isValid = false
-          alert('Y座標は0以上の数値である必要があります')
-        } else {
-          store.updateKey(store.selectedKey.id, { y: numValue })
-        }
-        break
-      }
-      case 'width': {
-        const numValue = parseFloat(value)
-        if (isNaN(numValue) || numValue < 0.25) {
-          isValid = false
-          alert('幅は0.25以上の数値である必要があります')
-        } else {
-          store.updateKey(store.selectedKey.id, { width: numValue })
-        }
-        break
-      }
-      case 'height': {
-        const numValue = parseFloat(value)
-        if (isNaN(numValue) || numValue < 0.25) {
-          isValid = false
-          alert('高さは0.25以上の数値である必要があります')
-        } else {
-          store.updateKey(store.selectedKey.id, { height: numValue })
-        }
-        break
-      }
-      case 'rotation': {
-        const numValue = parseFloat(value)
-        if (isNaN(numValue)) {
-          isValid = false
-          alert('回転角度は数値である必要があります')
-        } else {
-          // 角度を-180〜180の範囲に正規化
-          let normalizedValue = numValue
-          while (normalizedValue > 180) normalizedValue -= 360
-          while (normalizedValue <= -180) normalizedValue += 360
-          store.updateKey(store.selectedKey.id, { rotation: normalizedValue })
-        }
-        break
-      }
-      case 'row': {
-        const intValue = parseInt(value)
-        store.updateKey(store.selectedKey.id, {
-          matrix: {
-            ...store.selectedKey.matrix,
-            row: isNaN(intValue) ? undefined : intValue
-          }
-        })
-        break
-      }
-      case 'col': {
-        const intValue = parseInt(value)
-        store.updateKey(store.selectedKey.id, {
-          matrix: {
-            ...store.selectedKey.matrix,
-            col: isNaN(intValue) ? undefined : intValue
-          }
-        })
-        break
-      }
-      case 'keycode': {
-        const newKeycodes = { ...store.selectedKey.keycodes }
-        if (value) {
-          newKeycodes[store.currentLayer] = value
-        } else {
-          delete newKeycodes[store.currentLayer]
-        }
-        store.updateKey(store.selectedKey.id, {
-          keycodes: newKeycodes
-        })
-        break
-      }
-      default: {
-        // レジェンドフィールド
-        const legendFields = ['topLeft', 'topCenter', 'topRight', 'centerLeft', 'center', 'centerRight', 'bottomLeft', 'bottomCenter', 'bottomRight']
-        if (legendFields.includes(fieldName)) {
-          store.updateKey(store.selectedKey.id, {
-            legend: {
-              ...store.selectedKey.legend,
-              [fieldName]: value || undefined
-            }
-          })
-        }
-        break
+    } else {
+      const update = getNumericFieldUpdate(fieldName, rawValue)
+      if (update) {
+        store.updateKey(store.selectedKey.id, update)
       }
     }
-  } catch (error) {
-    isValid = false
-    alert('値の更新中にエラーが発生しました')
+  } else if (fieldName === 'row' || fieldName === 'col') {
+    // マトリクスフィールド
+    const update = getMatrixFieldUpdate(store.selectedKey.matrix, fieldName, rawValue)
+    store.updateKey(store.selectedKey.id, update)
+  } else if (fieldName === 'keycode') {
+    // キーコードフィールド
+    const update = getKeycodeFieldUpdate(store.selectedKey.keycodes, store.currentLayer, rawValue)
+    store.updateKey(store.selectedKey.id, update)
+  } else if (isLegendField(fieldName)) {
+    // レジェンドフィールド
+    const result = processTextField('legend', rawValue, { showError: true })
+    if (!result.isValid) {
+      isValid = false
+      // バリデーションエラー時にストア内のキーデータも復元
+      const lastValidValue = lastValidValues.value[fieldName]
+      const update = getLegendFieldUpdate(store.selectedKey.legend, fieldName, lastValidValue)
+      if (update) {
+        store.updateKey(store.selectedKey.id, update)
+      }
+    } else {
+      const update = getLegendFieldUpdate(store.selectedKey.legend, fieldName, rawValue)
+      if (update) {
+        store.updateKey(store.selectedKey.id, update)
+      }
+    }
   }
 
   // バリデーションに成功した場合のみ次のキーに移動
@@ -796,6 +813,11 @@ function handleEnterKey(fieldName: string) {
       })
     }
   }
+
+  // 次のティックでフラグをリセット（blurイベントが発生した後に実行されるように）
+  nextTick(() => {
+    isEnterPressed.value = false
+  })
 }
 
 // メタデータの初期化と監視
@@ -818,15 +840,33 @@ function loadMetadataFromStore() {
 }
 
 function updateTitle() {
-  store.updateMetadata({ name: title.value })
+  const result = processTextField('layoutName', title.value, { showError: true })
+  if (result.isValid) {
+    store.updateMetadata({ name: title.value })
+  } else {
+    // 無効な値の場合、ストアの値に戻す
+    title.value = store.layout.name || ''
+  }
 }
 
 function updateAuthor() {
-  store.updateMetadata({ author: author.value })
+  const result = processTextField('author', author.value, { showError: true })
+  if (result.isValid) {
+    store.updateMetadata({ author: author.value })
+  } else {
+    // 無効な値の場合、ストアの値に戻す
+    author.value = store.layout.metadata?.author || ''
+  }
 }
 
 function updateDescription() {
-  store.updateMetadata({ description: description.value })
+  const result = processTextField('description', description.value, { showError: true })
+  if (result.isValid) {
+    store.updateMetadata({ description: description.value })
+  } else {
+    // 無効な値の場合、ストアの値に戻す
+    description.value = store.layout.metadata?.description || ''
+  }
 }
 
 function updateLegendFont(event: Event) {

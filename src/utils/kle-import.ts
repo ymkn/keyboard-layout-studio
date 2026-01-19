@@ -1,6 +1,57 @@
 import type { KeyboardLayout, Key, KeyLegend } from '../types/keyboard'
 
 /**
+ * KLEメタデータの型定義
+ */
+interface KLEMetadata {
+  name?: string
+  author?: string
+  notes?: string
+  [key: string]: unknown
+}
+
+/**
+ * KLEキープロパティの型定義
+ */
+interface KLEKeyProps {
+  x?: number
+  y?: number
+  w?: number
+  h?: number
+  a?: number
+  [key: string]: unknown
+}
+
+/**
+ * KLE行要素の型（プロパティオブジェクトまたはラベル文字列）
+ */
+type KLERowElement = KLEKeyProps | string
+
+/**
+ * KLE行の型
+ */
+type KLERow = KLERowElement[]
+
+/**
+ * KLEデータの型（メタデータまたは行の配列）
+ */
+type KLEData = (KLEMetadata | KLERow)[]
+
+/**
+ * KLEメタデータかどうかを判定する型ガード
+ */
+function isKLEMetadata(item: unknown): item is KLEMetadata {
+  return typeof item === 'object' && item !== null && !Array.isArray(item)
+}
+
+/**
+ * KLEキープロパティかどうかを判定する型ガード
+ */
+function isKLEKeyProps(item: unknown): item is KLEKeyProps {
+  return typeof item === 'object' && item !== null && !Array.isArray(item)
+}
+
+/**
  * KLE JSON 文字列をパースして KeyboardLayout に変換
  */
 export function parseKLEJson(jsonString: string): KeyboardLayout {
@@ -23,7 +74,7 @@ export function parseKLEJson(jsonString: string): KeyboardLayout {
 /**
  * KLE データ配列を Keyboard Layout Studio の KeyboardLayout に変換
  */
-export function convertKLEToKLS(kleData: any[]): KeyboardLayout {
+export function convertKLEToKLS(kleData: KLEData): KeyboardLayout {
   const layout: KeyboardLayout = {
     name: 'Imported from KLE',
     keys: [],
@@ -36,7 +87,7 @@ export function convertKLEToKLS(kleData: any[]): KeyboardLayout {
 
   // メタデータの抽出（最初の要素がオブジェクトの場合）
   let startIndex = 0
-  if (kleData.length > 0 && !Array.isArray(kleData[0]) && typeof kleData[0] === 'object') {
+  if (kleData.length > 0 && isKLEMetadata(kleData[0])) {
     const meta = kleData[0]
     if (meta.name) layout.name = meta.name
     if (meta.author) layout.metadata!.author = meta.author
@@ -60,35 +111,36 @@ export function convertKLEToKLS(kleData: any[]): KeyboardLayout {
     let keyProps = getDefaultKeyProps()
 
     for (const element of row) {
-      if (typeof element === 'object' && element !== null && !Array.isArray(element)) {
+      if (isKLEKeyProps(element)) {
         // プロパティオブジェクト
-        if ('x' in element && typeof element.x === 'number') {
+        if (typeof element.x === 'number') {
           currentX += element.x
         }
-        if ('y' in element && typeof element.y === 'number') {
+        if (typeof element.y === 'number') {
           currentY += element.y
         }
-        if ('w' in element && typeof element.w === 'number') {
+        if (typeof element.w === 'number') {
           keyProps.width = element.w
         }
-        if ('h' in element && typeof element.h === 'number') {
+        if (typeof element.h === 'number') {
           keyProps.height = element.h
         }
-        if ('a' in element && typeof element.a === 'number') {
+        if (typeof element.a === 'number') {
           keyProps.alignment = element.a
         }
 
         // 警告: alignment が 4 以外の場合
-        if ('a' in element && element.a !== 4 && element.a !== undefined) {
+        if (element.a !== 4 && element.a !== undefined) {
           console.warn(`Alignment ${element.a} is not fully supported. Using best-effort mapping.`)
         }
 
       } else if (typeof element === 'string') {
         // キーラベル - 実際のキーを作成
+        // 注: 座標・サイズのサニタイズは loadLayout で行われる
         const key: Key = {
           id: String(keyIdCounter++),
-          x: Math.max(0, currentX), // 負の座標は 0 にクランプ
-          y: Math.max(0, currentY),
+          x: currentX,
+          y: currentY,
           width: keyProps.width,
           height: keyProps.height,
           legend: parseKLELabel(element),

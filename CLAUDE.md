@@ -26,57 +26,128 @@ npm run preview
 
 ## Architecture
 
+詳細なアーキテクチャドキュメントは `doc/architecture.md` を参照。
+
 ### State Management (Pinia)
 
-The entire application state is centralized in `src/stores/keyboard.ts`:
+ストアは責務ごとに分割されており、`keyboard.ts`は後方互換性のための統合ファサードとして機能します。
 
-**State**:
-- `layout` (KeyboardLayout) - Full keyboard layout data
-- `selectedKeyIds` (string[]) - Array of selected key IDs (supports multi-select)
-- `displayMode` ('legend' | 'matrix') - Toggle between legend and matrix display
-- `keyboardLayout` ('ANSI' | 'JIS') - Keyboard layout type for keycode display
-- `copiedKeys` (Key[]) - Keys in clipboard for copy/paste
-- `currentLayer` (number) - Active layer for keycode editing (0-15)
-- `history` (KeyboardLayout[]) - Undo/redo history (max 20 states)
-- `historyIndex` (number) - Current position in history
-- `layoutSource` ('new' | 'local' | 'gist') - Where the current layout was loaded from
-- `layoutGistId` (string | null) - Gist ID if loaded from Gist
-- `layoutGistFileKey` (string | null) - File key within Gist
-- `saveDestination` ('local' | 'gist') - Where to save the layout
-- `githubAuth` (GitHubAuth | null) - GitHub authentication info (token, username, avatarUrl)
+**ストア構成**:
+- `src/stores/keyboard.ts` - 統合ファサード（後方互換性、既存コードはこれを使用）
+- `src/stores/layout.ts` - 永続化対象のレイアウトデータとキー操作
+- `src/stores/editor.ts` - 選択状態、表示モード、クリップボード（セッション限定）
+- `src/stores/history.ts` - Undo/Redo履歴（セッション限定）
+- `src/stores/auth.ts` - GitHub認証、ソース/保存先管理
 
-**Key Actions**:
-- `selectKey(keyId)` - Select single key (or deselect if null)
-- `toggleKeySelection(keyId)` - Add/remove key from multi-selection
-- `selectMultipleKeys(keyIds)` - Replace selection with multiple keys
-- `clearSelection()` - Deselect all keys
-- `selectNextKey()` - Select next key in array (for Tab navigation)
-- `updateKey(keyId, updates)` - Partial update of key properties
-- `moveSelectedKeys(deltaX, deltaY)` - Move all selected keys (prevents negative coordinates)
-- `resizeSelectedKeys(deltaWidth, deltaHeight)` - Resize all selected keys (min 0.25u)
-- `rotateSelectedKeys(deltaAngle)` - Rotate all selected keys (normalizes to -180~180 range)
-- `addKey()` - Add new key (positioned right of selected key, or at 0,0)
-- `deleteSelectedKeys()` - Remove all selected keys
-- `loadLayout(newLayout)` - Replace entire layout (clears history, migrates old formats)
-- `copySelectedKeys()` - Copy selected keys to clipboard
-- `pasteKeys()` - Paste clipboard keys (maintains relative positions)
-- `toggleDisplayMode()` - Switch between 'legend' and 'matrix' display
-- `setKeyboardLayout(layoutType)` - Set keyboard layout type ('ANSI' | 'JIS')
-- `updateMetadata(updates)` - Update layout name, author, description
-- `setLegendFont(font)` - Set legend font (Google Fonts, or undefined for default)
-- `setCurrentLayer(layer)` - Change active layer (0-15)
-- `incrementLayerCount()` - Add layer (1-16 range), auto-assigns KC_TRNS to all keys on new layer
-- `decrementLayerCount()` - Remove layer, clears keycodes from removed layer
-- `undo()` / `redo()` - Navigate history
-- `createNewLayout()` - Reset to empty layout (clears history)
-- `setLayoutSource(source, gistId?, fileKey?)` - Set layout source tracking
-- `clearLayoutSource()` - Reset to local source
-- `setSaveDestination(dest)` - Set save destination ('local' | 'gist')
-- `setGitHubAuth(auth)` - Set GitHub authentication (persists to localStorage)
-- `loadGitHubAuth()` - Load GitHub auth from localStorage
-- `logoutGitHub()` - Clear GitHub auth and reset layout source if needed
+新規コードでは個別のストアを直接使用することを推奨:
+```typescript
+import { useLayoutStore } from '@/stores/layout'
+import { useEditorStore } from '@/stores/editor'
+import { useHistoryStore } from '@/stores/history'
+import { useAuthStore } from '@/stores/auth'
+```
+
+**useLayoutStore** (`src/stores/layout.ts`):
+- 永続化対象のレイアウトデータを管理
+- State: `layout`, `keys`, `layerCount`, `layoutName`, `legendFont`, `metadata`
+- Actions: `updateKey`, `moveKeys`, `resizeKeys`, `rotateKeys`, `addKey`, `deleteKeys`, `addKeys`, `loadLayout`, `setLayout`, `updateMetadata`, `setLegendFont`, `incrementLayerCount`, `decrementLayerCount`, `createNewLayout`, `getKeyById`, `getKeysByIds`
+
+**useEditorStore** (`src/stores/editor.ts`):
+- UI状態を管理（セッション終了時に破棄）
+- State: `selectedKeyIds`, `displayMode`, `keyboardLayout`, `copiedKeys`, `currentLayer`
+- Getters: `selectedKey`, `selectedKeys`, `hasSelection`, `hasSingleSelection`, `hasMultipleSelection`
+- Actions: `selectKey`, `toggleKeySelection`, `selectMultipleKeys`, `clearSelection`, `selectNextKey`, `toggleDisplayMode`, `setKeyboardLayout`, `copySelectedKeys`, `getCopiedKeys`, `hasCopiedKeys`, `setCurrentLayer`, `resetCurrentLayerIfNeeded`, `resetState`
+
+**useHistoryStore** (`src/stores/history.ts`):
+- Undo/Redo履歴を管理
+- State: `snapshots`, `currentIndex`
+- Getters: `canUndo`, `canRedo`
+- Actions: `saveSnapshot`, `undo`, `redo`, `clearHistory`, `initializeHistory`, `setupLayoutWatcher`
+
+**useAuthStore** (`src/stores/auth.ts`):
+- GitHub認証情報とレイアウトソース/保存先を管理
+- State: `githubAuth`, `layoutSource`, `layoutGistId`, `layoutGistFileKey`, `saveDestination`
+- Getters: `isLoggedIn`, `username`, `avatarUrl`, `token`
+- Actions: `setGitHubAuth`, `loadGitHubAuth`, `logoutGitHub`, `setLayoutSource`, `clearLayoutSource`, `setSaveDestination`, `resetToNew`
+
+**useKeyboardStore** (`src/stores/keyboard.ts`) - 統合ファサード:
+- 後方互換性のため、全ストアのState/Actionsをプロキシ
+- 内部で分割ストアを使用
+- すべてのState/Actionsを従来通りのAPIで提供
 
 All mutations update `metadata.modified` timestamp and save to history automatically.
+
+### Constants (`src/constants/`)
+
+マジックナンバーや設定値は定数ファイルに集約:
+
+**`app-config.ts`** - アプリケーション設定:
+```typescript
+APP_CONFIG.MAX_HISTORY_STATES  // 20 - 履歴の最大保持数
+APP_CONFIG.MAX_LAYER_COUNT     // 16 - レイヤー数上限
+APP_CONFIG.MIN_LAYER_COUNT     // 1 - レイヤー数下限
+APP_CONFIG.MIN_KEY_SIZE        // 0.25 - キーサイズ最小値(u)
+APP_CONFIG.DEFAULT_KEY_SIZE    // 1 - キーサイズデフォルト(u)
+APP_CONFIG.MAX_KEY_X           // 50 - X座標最大値(u)
+APP_CONFIG.MAX_KEY_Y           // 20 - Y座標最大値(u)
+APP_CONFIG.MAX_KEY_WIDTH       // 15 - 幅の最大値(u)
+APP_CONFIG.MAX_KEY_HEIGHT      // 5 - 高さの最大値(u)
+APP_CONFIG.MAX_MATRIX_ROW      // 32 - マトリクスROW最大値
+APP_CONFIG.MAX_MATRIX_COL      // 32 - マトリクスCOL最大値
+APP_CONFIG.ROTATION_STEP           // 3 - 回転刻み(度)
+APP_CONFIG.MOVE_STEP               // 0.25 - 移動/リサイズ刻み(u)
+APP_CONFIG.MAX_LEGEND_LENGTH       // 10 - レジェンド最大文字数
+APP_CONFIG.MAX_LAYOUT_NAME_LENGTH  // 50 - レイアウト名最大文字数
+APP_CONFIG.MAX_AUTHOR_LENGTH       // 50 - 作者名最大文字数
+APP_CONFIG.MAX_DESCRIPTION_LENGTH  // 200 - 説明最大文字数
+```
+
+**`rendering.ts`** - 描画関連定数:
+```typescript
+RENDERING.KEY_UNIT       // 54 - 1u = 54px
+RENDERING.GRID_SIZE      // 0.25 - グリッドサイズ(u)
+RENDERING.KEY_PADDING    // 4 - キー内部パディング(px)
+RENDERING.BASE_FONT_SIZE // 10.8 - 1uキーの基準フォントサイズ(px)
+RENDERING.SVG_PADDING    // 2 - SVGキャンバス余白(u)
+RENDERING.KEY_TOP_INSET  // 4 - キートップ凹み幅(px)
+```
+
+**`storage.ts`** - ストレージキー:
+```typescript
+STORAGE_KEYS.GITHUB_AUTH       // 'kls-github-auth' - GitHub認証(localStorage)
+STORAGE_KEYS.LAYOUT_PREFIX     // 'kls-layout-' - レイアウト保存プレフィックス
+STORAGE_KEYS.OAUTH_STATE       // 'kls-oauth-state' - OAuth state(sessionStorage)
+STORAGE_KEYS.OAUTH_REDIRECT_URI // 'kls-oauth-redirect-uri' - OAuth redirect URI
+```
+
+### Composables (`src/composables/`)
+
+再利用可能なロジックをComposableに抽出:
+
+**`useDragSelection.ts`** - ドラッグによる矩形選択:
+- `isDragging` - ドラッグ中フラグ
+- `selectionRect` - 選択矩形（ピクセル座標）
+- `justFinishedDrag` - ドラッグ直後フラグ（クリック抑制用）
+- `handleMouseDown/Move/Up` - マウスイベントハンドラ
+- `resetDrag` - 状態リセット
+
+**`useKeyboardShortcuts.ts`** - キーボードショートカット:
+- マップベースでショートカットを管理（if/switch文排除）
+- `createShortcuts(actions)` - ショートカット定義を生成
+- `handleKeyboardEvent(event, shortcuts, hasSelection)` - イベント処理
+- `useKeyboardShortcuts(actions, hasSelection)` - Composable本体
+
+**`useKeyPropertyFields.ts`** - プロパティフィールドのバリデーション:
+- `key-sanitizer.ts`のバリデーション/サニタイズロジックを使用
+- `NUMERIC_FIELD_DEFINITIONS` - 数値フィールドの定義（parse, validate, transform）
+- `processNumericField(fieldName, rawValue)` - 入力値の処理
+- `getNumericFieldUpdate/getMatrixFieldUpdate/getLegendFieldUpdate/getKeycodeFieldUpdate` - 更新データ生成
+
+**`useToast.ts`** - トースト通知:
+- シングルトンパターンでアプリ全体で共有
+- `showToast(message, type, duration)` - トースト表示
+- `hideToast()` - トースト非表示
+- `useToast()` - Composable本体（状態とメソッドを返す）
 
 ### Data Model (`src/types/keyboard.ts`)
 
@@ -170,6 +241,48 @@ interface GitHubUser {
   html_url: string
 }
 ```
+
+### Persistence Types (`src/types/persistence.ts`)
+
+永続化対象とランタイム専用の状態を型レベルで区別:
+
+```typescript
+// 永続化対象（LocalStorage/Gistに保存）
+interface PersistedLayout {
+  name: string
+  keys: Key[]
+  layerCount: number
+  legendFont?: LegendFont
+  metadata?: LayoutMetadata
+}
+
+// ランタイム専用（セッション終了時に破棄）
+interface EditorState {
+  selectedKeyIds: string[]
+  displayMode: 'legend' | 'matrix'
+  keyboardLayout: 'ANSI' | 'JIS'
+  copiedKeys: Key[]
+  currentLayer: number
+}
+
+interface HistoryState {
+  snapshots: PersistedLayout[]
+  currentIndex: number
+}
+
+interface AuthState {
+  githubAuth: GitHubAuth | null
+  layoutSource: StorageSource
+  layoutGistId: string | null
+  layoutGistFileKey: string | null
+  saveDestination: 'local' | 'gist'
+}
+```
+
+ユーティリティ関数:
+- `extractPersistedLayout(layout)` - KeyboardLayoutから永続化データを抽出
+- `isValidPersistedLayout(data)` - 型ガード
+- `createInitialEditorState/HistoryState/AuthState()` - 初期値生成
 
 ### Component Structure
 
@@ -275,6 +388,19 @@ interface GitHubUser {
 
 ### Utilities
 
+**`src/utils/key-sanitizer.ts`** - キーのバリデーション/サニタイズ:
+- `KEY_FIELD_CONSTRAINTS` - x, y, width, heightの制約定義
+- `MATRIX_FIELD_CONSTRAINTS` - row, colの制約定義
+- `TEXT_FIELD_CONSTRAINTS` - legend, layoutName, author, descriptionの制約定義
+- `validateNumericField(fieldName, value)` - 数値フィールドのバリデーション
+- `sanitizeNumericField(fieldName, value)` - 数値フィールドのサニタイズ（範囲内にクランプ）
+- `validateTextField(fieldName, value)` - テキストフィールドのバリデーション
+- `sanitizeTextField(fieldName, value)` - テキストフィールドのサニタイズ（最大長で切り詰め）
+- `normalizeRotation(value)` - 回転角度の正規化（-180〜180度）
+- `sanitizeKeyGeometry(key)` - キー全体のサニタイズ（loadLayoutで使用）
+- `getFieldErrorMessage(fieldName)` - 数値フィールドのエラーメッセージ取得
+- `getTextFieldErrorMessage(fieldName)` - テキストフィールドのエラーメッセージ取得
+
 **`src/utils/export.ts`**:
 - `exportToQMK(layout)` - Convert to QMK keyboard.json with keymap layers
 - `exportToVial(layout)` - Convert to Vial vial.json format
@@ -304,9 +430,10 @@ interface GitHubUser {
 
 ### Rendering Constants
 
-- **1u = 54px** (keyUnit constant in KeyboardCanvas and KeyComponent)
-- **Grid = 0.25u** (13.5px) - minimum movement/resize increment
-- **Padding = 4px** (internal key padding for top surface)
+See `src/constants/rendering.ts` for all rendering constants:
+- **1u = 54px** (`RENDERING.KEY_UNIT`)
+- **Grid = 0.25u** (13.5px) - minimum movement/resize increment (`RENDERING.GRID_SIZE`)
+- **Padding = 4px** - internal key padding for top surface (`RENDERING.KEY_PADDING`)
 
 ### Keyboard Shortcuts
 
@@ -370,7 +497,11 @@ Potential enhancements (not prioritized):
 ## Important Notes
 
 - All position/size values in the data model are in **u units**, converted to pixels only during rendering
-- Negative coordinates are prevented (clamped to 0) in moveSelectedKeys and updateKey
+- **バリデーション/サニタイズは`key-sanitizer.ts`に一元化**:
+  - `loadLayout`時に自動でサニタイズ（JSON編集、KLEインポート、LocalStorage/Gist読み込みすべてに適用）
+  - キーの座標・サイズ、メタデータ（レイアウト名、作者名、説明）が対象
+  - 不正な値は有効範囲にクランプ/切り詰めされ、修正があった場合はトースト通知で表示
+  - PropertyPanelの入力バリデーションも同じロジックを使用
 - Key IDs are generated using `Date.now() + index` - sufficient for single-user editing
 - The store uses deep cloning for history snapshots to prevent reference sharing
 - Special shapes (iso-enter, big-ass-enter, circle) have fixed dimensions and cannot be resized via UI

@@ -413,6 +413,7 @@ import type { Key } from '../types/keyboard'
 import { getKeycodeLabel } from '../data/keycode-labels'
 import { useKeyboardStore } from '../stores/keyboard'
 import { generateShapePath, getLegendOffset } from '../data/shape-presets'
+import { RENDERING } from '../constants/rendering'
 
 interface Props {
   keyData: Key
@@ -422,9 +423,9 @@ interface Props {
 const props = defineProps<Props>()
 const store = useKeyboardStore()
 
-const keyUnit = 54 // 1uのピクセルサイズ
-const padding = 4
-const baseFontSize = keyUnit * 0.2 // 1u x 1uのときのフォントサイズ (10.8px)
+const keyUnit = RENDERING.KEY_UNIT
+const padding = RENDERING.KEY_PADDING
+const baseFontSize = RENDERING.BASE_FONT_SIZE
 
 // 各表示用の固定フォントサイズ
 const fontSize = baseFontSize

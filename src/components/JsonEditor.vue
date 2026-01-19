@@ -150,6 +150,7 @@ import { useKeyboardStore } from '../stores/keyboard'
 import type { KeyboardLayout } from '../types/keyboard'
 import { exportToQMK, exportToVial, exportToQMKKeymapC, downloadJSON, downloadText } from '../utils/export'
 import { parseKLEJson } from '../utils/kle-import'
+import { showToast } from '../composables/useToast'
 
 interface Emits {
   (e: 'switch-to-layout'): void
@@ -267,9 +268,15 @@ function applyChanges() {
     }
 
     // 検証成功 - ストアに適用
-    store.loadLayout(parsed as KeyboardLayout)
+    // サニタイズはloadLayout内で実行されるが、JSONテキストは更新しない
+    // （編集中は一時的な値を保持するため、レイアウトビューで反映）
+    const hasCorrectedValues = store.loadLayout(parsed as KeyboardLayout)
     hasChanges.value = false
     error.value = null
+
+    if (hasCorrectedValues) {
+      showToast('一部の値が自動修正されました', 'success')
+    }
 
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'JSONの適用に失敗しました'
@@ -295,13 +302,17 @@ function handleKLEFileUpload(event: Event) {
       const importedLayout = parseKLEJson(jsonString)
 
       // ストアにロード
-      store.loadLayout(importedLayout)
+      const hasCorrectedValues = store.loadLayout(importedLayout)
 
       // エディタ表示更新
       loadFromStore()
 
       // エラークリア
       error.value = null
+
+      if (hasCorrectedValues) {
+        showToast('一部の値が自動修正されました', 'success')
+      }
     } catch (err) {
       error.value = err instanceof Error ? `KLEインポートエラー: ${err.message}` : 'KLE JSONの読み込みに失敗しました'
     }
