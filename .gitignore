@@ -42,3 +42,6 @@ dist-ssr
 
 # OS files
 Thumbs.db
+
+# plan files
+plan/
