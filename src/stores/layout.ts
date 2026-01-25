@@ -218,39 +218,42 @@ export const useLayoutStore = defineStore('layout', () => {
    * @returns 値の修正が行われた場合は true
    */
   function loadLayout(newLayout: KeyboardLayout): boolean {
+    // ディープクローンを作成（プリセットなど元データの汚染を防ぐ）
+    const clonedLayout = structuredClone(newLayout)
+
     // layerCountがない場合は1に設定
-    if (!newLayout.layerCount) {
-      newLayout.layerCount = 1
+    if (!clonedLayout.layerCount) {
+      clonedLayout.layerCount = 1
     }
 
     let hasCorrectedValues = false
 
     // メタデータのサニタイズ
-    const sanitizedName = sanitizeTextField('layoutName', newLayout.name || '')
-    if (sanitizedName !== newLayout.name) {
-      newLayout.name = sanitizedName
+    const sanitizedName = sanitizeTextField('layoutName', clonedLayout.name || '')
+    if (sanitizedName !== clonedLayout.name) {
+      clonedLayout.name = sanitizedName
       hasCorrectedValues = true
     }
 
-    if (newLayout.metadata) {
-      if (newLayout.metadata.author) {
-        const sanitizedAuthor = sanitizeTextField('author', newLayout.metadata.author)
-        if (sanitizedAuthor !== newLayout.metadata.author) {
-          newLayout.metadata.author = sanitizedAuthor
+    if (clonedLayout.metadata) {
+      if (clonedLayout.metadata.author) {
+        const sanitizedAuthor = sanitizeTextField('author', clonedLayout.metadata.author)
+        if (sanitizedAuthor !== clonedLayout.metadata.author) {
+          clonedLayout.metadata.author = sanitizedAuthor
           hasCorrectedValues = true
         }
       }
-      if (newLayout.metadata.description) {
-        const sanitizedDescription = sanitizeTextField('description', newLayout.metadata.description)
-        if (sanitizedDescription !== newLayout.metadata.description) {
-          newLayout.metadata.description = sanitizedDescription
+      if (clonedLayout.metadata.description) {
+        const sanitizedDescription = sanitizeTextField('description', clonedLayout.metadata.description)
+        if (sanitizedDescription !== clonedLayout.metadata.description) {
+          clonedLayout.metadata.description = sanitizedDescription
           hasCorrectedValues = true
         }
       }
     }
 
     // 各キーの古い形式を新形式に変換し、値をサニタイズ
-    newLayout.keys = (newLayout.keys as unknown[]).map((key): Key => {
+    clonedLayout.keys = (clonedLayout.keys as unknown[]).map((key): Key => {
       let convertedKey: Key
 
       if (isLegacyKey(key)) {
@@ -275,7 +278,7 @@ export const useLayoutStore = defineStore('layout', () => {
       return sanitized
     })
 
-    layout.value = newLayout
+    layout.value = clonedLayout
     return hasCorrectedValues
   }
 

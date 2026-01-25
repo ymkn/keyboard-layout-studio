@@ -18,8 +18,8 @@
           <label for="keyboard-layout" class="text-sm text-gray-300">レイアウト:</label>
           <select
             id="keyboard-layout"
-            v-model="store.keyboardLayout"
-            @change="handleLayoutChange"
+            :value="store.keyboardLayout"
+            @change="handleLayoutChange($event)"
             class="px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 hover:bg-gray-600 transition-colors text-sm"
           >
             <option value="ANSI">ANSI</option>
@@ -269,10 +269,10 @@ function handleJsonError() {
   activeTab.value = 'json'
 }
 
-function handleLayoutChange() {
-  // キーボードレイアウトが変更された際の処理
-  // storeのsetKeyboardLayoutはv-modelで自動的に呼ばれるため、ここでは特に何もしない
-  // 必要に応じて、将来的にLocalStorageに保存するなどの処理を追加可能
+function handleLayoutChange(event: Event) {
+  const target = event.target as HTMLSelectElement
+  const value = target.value as 'ANSI' | 'JIS'
+  store.setKeyboardLayout(value)
 }
 
 // OAuthコールバックを処理
