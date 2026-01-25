@@ -1,70 +1,70 @@
 <template>
   <div class="property-panel p-4">
-    <h2 class="text-lg font-bold text-white mb-4">プロパティ</h2>
+    <h2 class="text-lg font-bold text-white mb-4">{{ t('propertyPanel.properties') }}</h2>
 
     <div v-if="store.selectedKeyIds.length === 0" class="space-y-4">
       <!-- レイアウト画面のみメタデータを表示 -->
       <template v-if="props.activeTab === 'layout'">
         <!-- レイアウト情報 -->
-        <p class="text-sm text-gray-400">レイアウト全体の情報</p>
+        <p class="text-sm text-gray-400">{{ t('propertyPanel.layoutInfo') }}</p>
 
         <!-- タイトル -->
         <div class="property-section">
-          <h3 class="text-sm font-semibold text-gray-300 mb-2">タイトル</h3>
+          <h3 class="text-sm font-semibold text-gray-300 mb-2">{{ t('propertyPanel.title') }}</h3>
           <input
             v-model="title"
             @input="updateTitle"
             type="text"
-            placeholder="例: My Custom Keyboard Layout"
+            :placeholder="t('propertyPanel.titlePlaceholder')"
             class="w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none text-sm"
           />
         </div>
 
         <!-- 作者名 -->
         <div class="property-section">
-          <h3 class="text-sm font-semibold text-gray-300 mb-2">作者名</h3>
+          <h3 class="text-sm font-semibold text-gray-300 mb-2">{{ t('propertyPanel.author') }}</h3>
           <input
             v-model="author"
             @input="updateAuthor"
             type="text"
-            placeholder="例: John Doe"
+            :placeholder="t('propertyPanel.authorPlaceholder')"
             class="w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none text-sm"
           />
         </div>
 
         <!-- 説明 -->
         <div class="property-section">
-          <h3 class="text-sm font-semibold text-gray-300 mb-2">説明</h3>
+          <h3 class="text-sm font-semibold text-gray-300 mb-2">{{ t('propertyPanel.description') }}</h3>
           <textarea
             v-model="description"
             @input="updateDescription"
             rows="4"
-            placeholder="例: 60%キーボード用のカスタムレイアウト"
+            :placeholder="t('propertyPanel.descriptionPlaceholder')"
             class="w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none text-sm resize-none"
           ></textarea>
         </div>
 
         <!-- レジェンドフォント -->
         <div class="property-section">
-          <h3 class="text-sm font-semibold text-gray-300 mb-2">レジェンドフォント</h3>
+          <h3 class="text-sm font-semibold text-gray-300 mb-2">{{ t('propertyPanel.legendFont') }}</h3>
           <select
             :value="store.layout.legendFont || ''"
             @change="updateLegendFont"
             class="w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none text-sm"
           >
-            <option value="">デフォルト</option>
-            <optgroup label="ゴシック系">
+            <option value="">{{ t('common.default') }}</option>
+            <optgroup :label="t('propertyPanel.fontGroupGothic')">
               <option value="Noto Sans JP">Noto Sans JP</option>
               <option value="M PLUS 1p">M PLUS 1p</option>
               <option value="M PLUS 2">M PLUS 2</option>
               <option value="Zen Kaku Gothic New">Zen Kaku Gothic New</option>
             </optgroup>
-            <optgroup label="丸ゴシック系">
+            <optgroup :label="t('propertyPanel.fontGroupRounded')">
               <option value="M PLUS Rounded 1c">M PLUS Rounded 1c</option>
               <option value="Zen Maru Gothic">Zen Maru Gothic</option>
               <option value="Kosugi Maru">Kosugi Maru</option>
             </optgroup>
-            <optgroup label="明朝系">
+            <optgroup :label="t('propertyPanel.fontGroupMincho')">
               <option value="Noto Serif JP">Noto Serif JP</option>
               <option value="Zen Old Mincho">Zen Old Mincho</option>
               <option value="Shippori Mincho">Shippori Mincho</option>
@@ -75,45 +75,45 @@
             class="mt-2 text-xs text-gray-400"
             :style="{ fontFamily: `'${store.layout.legendFont}', sans-serif` }"
           >
-            プレビュー: あいうえお ABCDE 12345
+            {{ t('propertyPanel.fontPreview') }}
           </p>
         </div>
 
         <!-- 追加情報 -->
         <div class="property-section">
-          <h3 class="text-sm font-semibold text-gray-300 mb-2">追加情報</h3>
+          <h3 class="text-sm font-semibold text-gray-300 mb-2">{{ t('propertyPanel.additionalInfo') }}</h3>
           <div class="space-y-2 text-xs">
             <div class="flex justify-between">
-              <span class="text-gray-400">作成日時:</span>
+              <span class="text-gray-400">{{ t('propertyPanel.createdAt') }}</span>
               <span class="text-gray-300">{{ formatDate(store.layout.metadata?.created) }}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-gray-400">最終更新:</span>
+              <span class="text-gray-400">{{ t('propertyPanel.modifiedAt') }}</span>
               <span class="text-gray-300">{{ formatDate(store.layout.metadata?.modified) }}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-gray-400">キー数:</span>
-              <span class="text-gray-300">{{ store.keys.length }} keys</span>
+              <span class="text-gray-400">{{ t('propertyPanel.keyCount') }}</span>
+              <span class="text-gray-300">{{ store.keys.length }} {{ t('propertyPanel.keys') }}</span>
             </div>
 
             <!-- 幅別内訳 -->
             <div class="mt-3 pt-2 border-t border-gray-700">
-              <div class="font-semibold text-gray-300 mb-1">幅別内訳:</div>
+              <div class="font-semibold text-gray-300 mb-1">{{ t('propertyPanel.sizeBreakdown') }}</div>
               <div class="space-y-1 ml-2">
                 <!-- 特殊形状（形状別に表示） -->
                 <div v-for="[shape, count] in sortedSpecialShapeCounts" :key="shape" class="flex justify-between">
                   <span class="text-gray-400">{{ getShapeDisplayName(shape) }}:</span>
-                  <span class="text-gray-300">{{ count }} keys</span>
+                  <span class="text-gray-300">{{ count }} {{ t('propertyPanel.keys') }}</span>
                 </div>
                 <!-- 縦長キー（高さが1uでない） -->
                 <div v-for="[size, count] in sortedVerticalCounts" :key="size" class="flex justify-between">
                   <span class="text-gray-400">{{ size }}:</span>
-                  <span class="text-gray-300">{{ count }} keys</span>
+                  <span class="text-gray-300">{{ count }} {{ t('propertyPanel.keys') }}</span>
                 </div>
                 <!-- 通常の長方形（高さ1u）の幅別 -->
                 <div v-for="[width, count] in sortedWidthCounts" :key="width" class="flex justify-between">
                   <span class="text-gray-400">{{ width }}u:</span>
-                  <span class="text-gray-300">{{ count }} keys</span>
+                  <span class="text-gray-300">{{ count }} {{ t('propertyPanel.keys') }}</span>
                 </div>
               </div>
             </div>
@@ -123,29 +123,29 @@
 
       <!-- JSON画面では選択メッセージのみ -->
       <template v-else>
-        <p class="text-sm text-gray-400">キーを選択してプロパティを編集します</p>
+        <p class="text-sm text-gray-400">{{ t('propertyPanel.selectKeyToEdit') }}</p>
       </template>
     </div>
 
     <div v-else-if="store.selectedKeyIds.length > 1" class="text-gray-400">
-      <p class="text-sm mb-2">{{ store.selectedKeyIds.length }} 個のキーが選択されています</p>
-      <p class="text-xs text-gray-500">複数選択時はプロパティの編集はできません。</p>
-      <p class="text-xs text-gray-500 mt-2">カーソルキー: 移動<br/>Shift+カーソルキー: サイズ変更</p>
+      <p class="text-sm mb-2">{{ t('propertyPanel.keysSelected', { count: store.selectedKeyIds.length }) }}</p>
+      <p class="text-xs text-gray-500">{{ t('propertyPanel.multiSelectInfo') }}</p>
+      <p class="text-xs text-gray-500 mt-2 whitespace-pre-line">{{ t('propertyPanel.multiSelectHint') }}</p>
     </div>
 
     <div v-else-if="store.selectedKey" class="space-y-4">
       <!-- 形状 -->
       <div class="property-section">
-        <h3 class="text-sm font-semibold text-gray-300 mb-2">形状</h3>
+        <h3 class="text-sm font-semibold text-gray-300 mb-2">{{ t('propertyPanel.shape') }}</h3>
         <select
           :value="store.selectedKey.shape || 'rectangle'"
           @change="updateShape"
           class="w-full px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-sm"
         >
-          <option value="rectangle">長方形</option>
-          <option value="iso-enter">ISO Enter</option>
-          <option value="big-ass-enter">Big Ass Enter</option>
-          <option value="circle">円形</option>
+          <option value="rectangle">{{ t('propertyPanel.shapeRectangle') }}</option>
+          <option value="iso-enter">{{ t('propertyPanel.shapeIsoEnter') }}</option>
+          <option value="big-ass-enter">{{ t('propertyPanel.shapeBigAssEnter') }}</option>
+          <option value="circle">{{ t('propertyPanel.shapeCircle') }}</option>
         </select>
         <p class="text-xs text-gray-500 mt-1">
           {{ getShapeDescription(store.selectedKey.shape || 'rectangle') }}
@@ -154,7 +154,7 @@
 
       <!-- 位置 -->
       <div class="property-section">
-        <h3 class="text-sm font-semibold text-gray-300 mb-2">位置</h3>
+        <h3 class="text-sm font-semibold text-gray-300 mb-2">{{ t('propertyPanel.position') }}</h3>
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="text-xs text-gray-400">X (u)</label>
@@ -191,10 +191,10 @@
 
       <!-- サイズ -->
       <div class="property-section">
-        <h3 class="text-sm font-semibold text-gray-300 mb-2">サイズ</h3>
+        <h3 class="text-sm font-semibold text-gray-300 mb-2">{{ t('propertyPanel.size') }}</h3>
         <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="text-xs text-gray-400">幅 (u)</label>
+            <label class="text-xs text-gray-400">{{ t('propertyPanel.width') }} (u)</label>
             <input
               :ref="(el) => setInputRef(el, 'width')"
               type="number"
@@ -213,7 +213,7 @@
             />
           </div>
           <div>
-            <label class="text-xs text-gray-400">高さ (u)</label>
+            <label class="text-xs text-gray-400">{{ t('propertyPanel.height') }} (u)</label>
             <input
               :ref="(el) => setInputRef(el, 'height')"
               type="number"
@@ -233,13 +233,13 @@
           </div>
         </div>
         <p v-if="!isShapeResizable" class="text-xs text-yellow-500 mt-1">
-          この形状は固定サイズです
+          {{ t('propertyPanel.fixedSizeShape') }}
         </p>
       </div>
 
       <!-- 回転 -->
       <div class="property-section">
-        <h3 class="text-sm font-semibold text-gray-300 mb-2">回転</h3>
+        <h3 class="text-sm font-semibold text-gray-300 mb-2">{{ t('propertyPanel.rotation') }}</h3>
         <div class="flex items-center gap-2">
           <input
             :ref="(el) => setInputRef(el, 'rotation')"
@@ -252,14 +252,14 @@
             step="3"
             class="flex-1 px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-sm"
           />
-          <span class="text-gray-400 text-sm">度</span>
+          <span class="text-gray-400 text-sm">{{ t('propertyPanel.degrees') }}</span>
         </div>
-        <p class="text-xs text-gray-500 mt-1">R: +3° / Shift+R: -3°</p>
+        <p class="text-xs text-gray-500 mt-1">{{ t('propertyPanel.rotationHint') }}</p>
       </div>
 
       <!-- レジェンド -->
       <div class="property-section">
-        <h3 class="text-sm font-semibold text-gray-300 mb-2">レジェンド</h3>
+        <h3 class="text-sm font-semibold text-gray-300 mb-2">{{ t('propertyPanel.legends') }}</h3>
         <div class="space-y-2">
           <!-- 上段 -->
           <div class="grid grid-cols-3 gap-1">
@@ -271,7 +271,7 @@
               @focus="saveValidValue('topLeft')"
               @blur="validateField('topLeft', $event)"
               @keydown.enter="handleEnterKey('topLeft')"
-              placeholder="左上"
+              :placeholder="t('propertyPanel.legendTopLeft')"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
               :style="legendFontStyle"
             />
@@ -283,7 +283,7 @@
               @focus="saveValidValue('topCenter')"
               @blur="validateField('topCenter', $event)"
               @keydown.enter="handleEnterKey('topCenter')"
-              placeholder="中上"
+              :placeholder="t('propertyPanel.legendTopCenter')"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
               :style="legendFontStyle"
             />
@@ -295,7 +295,7 @@
               @focus="saveValidValue('topRight')"
               @blur="validateField('topRight', $event)"
               @keydown.enter="handleEnterKey('topRight')"
-              placeholder="右上"
+              :placeholder="t('propertyPanel.legendTopRight')"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
               :style="legendFontStyle"
             />
@@ -311,7 +311,7 @@
               @focus="saveValidValue('centerLeft')"
               @blur="validateField('centerLeft', $event)"
               @keydown.enter="handleEnterKey('centerLeft')"
-              placeholder="左中"
+              :placeholder="t('propertyPanel.legendCenterLeft')"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
               :style="legendFontStyle"
             />
@@ -323,7 +323,7 @@
               @focus="saveValidValue('center')"
               @blur="validateField('center', $event)"
               @keydown.enter="handleEnterKey('center')"
-              placeholder="中央"
+              :placeholder="t('propertyPanel.legendCenter')"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs font-semibold"
               :style="legendFontStyle"
             />
@@ -335,7 +335,7 @@
               @focus="saveValidValue('centerRight')"
               @blur="validateField('centerRight', $event)"
               @keydown.enter="handleEnterKey('centerRight')"
-              placeholder="右中"
+              :placeholder="t('propertyPanel.legendCenterRight')"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
               :style="legendFontStyle"
             />
@@ -351,7 +351,7 @@
               @focus="saveValidValue('bottomLeft')"
               @blur="validateField('bottomLeft', $event)"
               @keydown.enter="handleEnterKey('bottomLeft')"
-              placeholder="左下"
+              :placeholder="t('propertyPanel.legendBottomLeft')"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
               :style="legendFontStyle"
             />
@@ -363,7 +363,7 @@
               @focus="saveValidValue('bottomCenter')"
               @blur="validateField('bottomCenter', $event)"
               @keydown.enter="handleEnterKey('bottomCenter')"
-              placeholder="中下"
+              :placeholder="t('propertyPanel.legendBottomCenter')"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
               :style="legendFontStyle"
             />
@@ -375,7 +375,7 @@
               @focus="saveValidValue('bottomRight')"
               @blur="validateField('bottomRight', $event)"
               @keydown.enter="handleEnterKey('bottomRight')"
-              placeholder="右下"
+              :placeholder="t('propertyPanel.legendBottomRight')"
               class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-xs"
               :style="legendFontStyle"
             />
@@ -385,7 +385,7 @@
 
       <!-- キーマトリクス -->
       <div class="property-section">
-        <h3 class="text-sm font-semibold text-gray-300 mb-2">キーマトリクス</h3>
+        <h3 class="text-sm font-semibold text-gray-300 mb-2">{{ t('propertyPanel.keyMatrix') }}</h3>
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="text-xs text-gray-400">ROW</label>
@@ -416,7 +416,7 @@
 
       <!-- キーコード -->
       <div class="property-section">
-        <h3 class="text-sm font-semibold text-gray-300 mb-2">キーコード</h3>
+        <h3 class="text-sm font-semibold text-gray-300 mb-2">{{ t('propertyPanel.keycode') }}</h3>
         <div class="flex gap-2">
           <input
             :ref="(el) => setInputRef(el, 'keycode')"
@@ -424,13 +424,13 @@
             :value="store.selectedKey.keycodes?.[store.currentLayer] || ''"
             @input="updateKeycode"
             @keydown.enter="handleEnterKey('keycode')"
-            placeholder="KC_A, MO(1), etc..."
+            :placeholder="t('propertyPanel.keycodePlaceholder')"
             class="flex-1 px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-sm font-mono"
           />
           <button
             @click="showKeycodeDialog = true"
             class="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors text-sm"
-            title="キーコードを選択"
+            :title="t('propertyPanel.selectKeycode')"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -453,6 +453,7 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, watch, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useKeyboardStore } from '../stores/keyboard'
 import { getKeycodeLabel } from '../data/keycodes'
 import { SHAPE_PRESETS } from '../data/shape-presets'
@@ -467,6 +468,8 @@ import {
   getKeycodeFieldUpdate,
   isLegendField
 } from '../composables/useKeyPropertyFields'
+
+const { t, locale } = useI18n()
 
 // Propsの定義
 const props = defineProps<{
@@ -571,19 +574,14 @@ const sortedSpecialShapeCounts = computed(() => {
     .filter(([, count]) => count > 0)
 })
 
-// 形状名を日本語に変換
+// 形状名を翻訳（shape-presets.tsのキー名をそのまま使用）
 function getShapeDisplayName(shape: string): string {
-  const shapeNames: Record<string, string> = {
-    'iso-enter': 'ISO Enter',
-    'big-ass-enter': 'Big Ass Enter',
-    'circle': '円形'
-  }
-  return shapeNames[shape] || shape
+  return t(`shapes.${shape}`)
 }
 
-// 形状の説明文を取得
+// 形状の説明文を取得（shape-presets.tsのキー名 + "-desc"）
 function getShapeDescription(shape: KeyShape): string {
-  return SHAPE_PRESETS[shape].description
+  return t(`shapes.${shape}-desc`)
 }
 
 // 形状を変更
@@ -875,10 +873,11 @@ function updateLegendFont(event: Event) {
 }
 
 function formatDate(dateString?: string): string {
-  if (!dateString) return '未設定'
+  if (!dateString) return t('propertyPanel.notSet')
   try {
     const date = new Date(dateString)
-    return date.toLocaleString('ja-JP', {
+    // アプリの言語設定に従ってフォーマット
+    return date.toLocaleString(locale.value, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -886,7 +885,7 @@ function formatDate(dateString?: string): string {
       minute: '2-digit'
     })
   } catch {
-    return '無効な日付'
+    return t('propertyPanel.invalidDate')
   }
 }
 </script>

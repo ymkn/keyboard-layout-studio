@@ -8,7 +8,7 @@
       <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
         <!-- ヘッダー -->
         <div class="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
-          <h2 class="text-xl font-bold text-white">QMK キーコード選択</h2>
+          <h2 class="text-xl font-bold text-white">{{ t('dialogs.keycodePicker.title') }}</h2>
           <button
             @click="close"
             class="text-gray-400 hover:text-white transition-colors"
@@ -24,7 +24,7 @@
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="キーコードを検索..."
+            :placeholder="t('dialogs.keycodePicker.searchPlaceholder')"
             class="w-full px-4 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
           />
         </div>
@@ -54,7 +54,7 @@
             v-if="filteredKeycodes.length === 0"
             class="text-center text-gray-400 py-8"
           >
-            キーコードが見つかりません
+            {{ t('dialogs.keycodePicker.noResults') }}
           </div>
           <div v-else class="grid grid-cols-4 gap-2">
             <button
@@ -73,20 +73,20 @@
         <!-- フッター -->
         <div class="px-6 py-4 border-t border-gray-700 flex justify-between items-center">
           <div class="text-sm text-gray-400">
-            {{ filteredKeycodes.length }} 件のキーコード
+            {{ t('dialogs.keycodePicker.keycodeCount', { count: filteredKeycodes.length }) }}
           </div>
           <div class="flex gap-2">
             <button
               @click="selectKeycode('')"
               class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors"
             >
-              クリア
+              {{ t('common.clear') }}
             </button>
             <button
               @click="close"
               class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
             >
-              閉じる
+              {{ t('common.close') }}
             </button>
           </div>
         </div>
@@ -97,9 +97,12 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { keycodeCategories } from '../data/keycodes'
 import { getKeycodeLabel } from '../data/keycode-labels'
 import { useKeyboardStore } from '../stores/keyboard'
+
+const { t } = useI18n()
 
 interface Props {
   modelValue: boolean

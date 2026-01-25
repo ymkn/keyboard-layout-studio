@@ -7,7 +7,7 @@
     <div class="flex flex-col max-w-[95vw] max-h-[95vh]">
       <!-- ヘッダー -->
       <div class="flex items-center justify-between bg-gray-800 px-4 py-3 rounded-t-lg">
-        <span class="text-white font-medium">撮影モード</span>
+        <span class="text-white font-medium">{{ t('dialogs.screenshot.title') }}</span>
         <div class="flex items-center gap-4">
           <!-- タイトル表示トグル -->
           <label class="flex items-center gap-2 cursor-pointer">
@@ -16,7 +16,7 @@
               v-model="showTitle"
               class="w-4 h-4 rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500 focus:ring-offset-gray-800"
             />
-            <span class="text-sm text-gray-300">タイトル表示</span>
+            <span class="text-sm text-gray-300">{{ t('dialogs.screenshot.showTitle') }}</span>
           </label>
           <button
             @click="$emit('close')"
@@ -81,7 +81,7 @@
 
       <!-- フッター -->
       <div class="bg-gray-800 px-4 py-3 text-center text-sm text-gray-400">
-        スクリーンショットツールを使用して撮影してください
+        {{ t('dialogs.screenshot.hint') }}
       </div>
     </div>
   </div>
@@ -89,8 +89,11 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useKeyboardStore } from '../stores/keyboard'
 import KeyComponent from './KeyComponent.vue'
+
+const { t } = useI18n()
 
 interface Props {
   isOpen: boolean

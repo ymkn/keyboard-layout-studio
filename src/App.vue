@@ -13,9 +13,12 @@
 
       <!-- 右側ボタングループ -->
       <div class="flex items-center gap-4">
-        <!-- 言語設定ドロップダウン -->
+        <!-- 言語切り替え -->
+        <LanguageSelector />
+
+        <!-- キーボードレイアウト設定 -->
         <div class="flex items-center gap-2">
-          <label for="keyboard-layout" class="text-sm text-gray-300">レイアウト:</label>
+          <label for="keyboard-layout" class="text-sm text-gray-300">{{ t('header.layoutType') }}</label>
           <select
             id="keyboard-layout"
             :value="store.keyboardLayout"
@@ -31,13 +34,13 @@
           @click="showNewLayoutDialog = true"
           class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-sm font-semibold"
         >
-          <i class="fa-solid fa-file-circle-plus"></i> 新規作成
+          <i class="fa-solid fa-file-circle-plus"></i> {{ t('common.newLayout') }}
         </button>
         <button
           @click="handleOpenLayout"
           class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-sm font-semibold"
         >
-          <i class="fa-solid fa-folder-open"></i> 開く
+          <i class="fa-solid fa-folder-open"></i> {{ t('common.open') }}
         </button>
         <!-- 保存ボタン + 保存先トグル -->
         <div class="flex items-center">
@@ -45,7 +48,7 @@
             @click="handleSaveLayout"
             class="px-4 py-2 bg-gray-600 text-white rounded-l hover:bg-gray-700 transition-colors text-sm font-semibold border-r border-gray-500"
           >
-            <i class="fa-solid fa-floppy-disk"></i> 保存
+            <i class="fa-solid fa-floppy-disk"></i> {{ t('common.save') }}
           </button>
           <div class="flex rounded-r overflow-hidden border border-gray-600 border-l-0">
             <button
@@ -56,7 +59,7 @@
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
               ]"
-              title="ローカルに保存"
+              :title="t('header.saveToLocal')"
             >
               <i class="fa-solid fa-hard-drive"></i>
             </button>
@@ -69,7 +72,7 @@
                   : 'bg-gray-700 text-gray-400 hover:bg-gray-600',
                 !store.isLoggedIn && 'opacity-60'
               ]"
-              :title="store.isLoggedIn ? 'Gistに保存' : 'GitHubにログインしてください'"
+              :title="store.isLoggedIn ? t('header.saveToGist') : t('header.pleaseLoginGitHub')"
             >
               <i class="fa-brands fa-github"></i>
             </button>
@@ -88,7 +91,7 @@
             @click="showGitHubLoginDialog = true"
             class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-sm font-semibold"
           >
-            <i class="fa-brands fa-github"></i> GitHubでログイン
+            <i class="fa-brands fa-github"></i> {{ t('header.loginWithGitHub') }}
           </button>
         </div>
       </div>
@@ -108,7 +111,7 @@
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             ]"
           >
-            レイアウト
+            {{ t('tabs.layout') }}
           </button>
           <button
             @click="switchToJsonTab"
@@ -119,7 +122,7 @@
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             ]"
           >
-            JSON
+            {{ t('tabs.json') }}
           </button>
         </div>
 
@@ -148,9 +151,9 @@
     <!-- 新規作成確認ダイアログ -->
     <ConfirmDialog
       :show="showNewLayoutDialog"
-      title="新規作成"
-      message="現在のレイアウトを破棄して、新しいレイアウトを作成しますか？この操作は取り消せません。"
-      confirm-text="新規作成"
+      :title="t('dialogs.newLayout.title')"
+      :message="t('dialogs.newLayout.message')"
+      :confirm-text="t('dialogs.newLayout.confirm')"
       @confirm="handleNewLayout"
       @cancel="showNewLayoutDialog = false"
     />
@@ -172,9 +175,9 @@
     <!-- 削除確認ダイアログ -->
     <ConfirmDialog
       :show="showDeleteConfirmDialog"
-      title="レイアウトを削除"
-      :message="`「${layoutToDelete?.filename}」を削除しますか？この操作は取り消せません。`"
-      confirm-text="削除"
+      :title="t('dialogs.deleteLayout.title')"
+      :message="t('dialogs.deleteLayout.message', { name: layoutToDelete?.filename })"
+      :confirm-text="t('dialogs.deleteLayout.confirm')"
       @confirm="handleDeleteConfirm"
       @cancel="showDeleteConfirmDialog = false"
     />
@@ -182,9 +185,9 @@
     <!-- 開く確認ダイアログ -->
     <ConfirmDialog
       :show="showOpenConfirmDialog"
-      title="レイアウトを開く"
-      message="現在のレイアウトへの変更が破棄されます。よろしいですか？"
-      confirm-text="開く"
+      :title="t('dialogs.openConfirm.title')"
+      :message="t('dialogs.openConfirm.message')"
+      :confirm-text="t('dialogs.openConfirm.confirm')"
       @confirm="handleOpenConfirm"
       @cancel="showOpenConfirmDialog = false"
     />
@@ -217,6 +220,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import KeyboardCanvas from './components/KeyboardCanvas.vue'
 import PropertyPanel from './components/PropertyPanel.vue'
 import JsonEditor from './components/JsonEditor.vue'
@@ -225,6 +229,7 @@ import SavedListDialog from './components/SavedListDialog.vue'
 import AboutDialog from './components/AboutDialog.vue'
 import GitHubLoginDialog from './components/GitHubLoginDialog.vue'
 import GitHubUserBadge from './components/GitHubUserBadge.vue'
+import LanguageSelector from './components/LanguageSelector.vue'
 import { useKeyboardStore } from './stores/keyboard'
 import { useToast } from './composables/useToast'
 import { GitHubService, filterKLSGists, getGitHubErrorMessage, exchangeCodeForToken } from './services/github'
@@ -232,6 +237,8 @@ import { STORAGE_KEYS } from './constants/storage'
 import type { PresetInfo } from './services/presets'
 import type { KeyboardLayout } from './types/keyboard'
 import type { SavedLayoutItem } from './types/github'
+
+const { t } = useI18n()
 
 // アプリケーションバージョン（package.jsonから自動取得）
 const appVersion = __APP_VERSION__
@@ -283,34 +290,34 @@ async function handleOAuthCallback(): Promise<void> {
   const errorDescription = urlParams.get('error_description')
   
   if (error) {
-    toast.showToast(`GitHub認証エラー: ${errorDescription || error}`, 'error')
+    toast.showToast(t('toast.githubAuthError', { error: errorDescription || error }), 'error')
     window.history.replaceState({}, '', window.location.pathname)
     return
   }
-  
+
   if (!code) return
-  
+
   const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID
   if (!clientId) {
-    toast.showToast('VITE_GITHUB_CLIENT_IDが設定されていません', 'error')
+    toast.showToast(t('toast.clientIdNotSet'), 'error')
     window.history.replaceState({}, '', window.location.pathname)
     return
   }
-  
+
   try {
     const { access_token } = await exchangeCodeForToken(code)
     const service = new GitHubService(access_token)
     const user = await service.validateToken()
-    
+
     store.setGitHubAuth({
       token: access_token,
       username: user.login,
       avatarUrl: user.avatar_url
     })
-    
-    toast.showToast(`${user.login}として認証されました`, 'success')
+
+    toast.showToast(t('toast.authenticatedAs', { username: user.login }), 'success')
   } catch (error) {
-    toast.showToast(`認証エラー: ${getGitHubErrorMessage(error)}`, 'error')
+    toast.showToast(t('toast.authError', { error: getGitHubErrorMessage(error) }), 'error')
   } finally {
     window.history.replaceState({}, '', window.location.pathname)
   }
@@ -382,7 +389,7 @@ async function handleOpenLayout() {
       } catch (e) {
         // Gist取得エラーは警告として表示し、ローカルのみ表示
         console.warn('Gist取得エラー:', e)
-        layoutListError.value = 'Gistの取得に失敗しました。ローカル保存のみ表示しています。'
+        layoutListError.value = t('dialogs.openLayout.gistFetchError')
       }
     }
 
@@ -392,7 +399,7 @@ async function handleOpenLayout() {
 
     layoutList.value = allLayouts
   } catch (error) {
-    layoutListError.value = error instanceof Error ? error.message : 'レイアウト一覧の取得に失敗しました'
+    layoutListError.value = error instanceof Error ? error.message : t('toast.listFetchFailed')
   } finally {
     layoutListLoading.value = false
   }
@@ -416,7 +423,7 @@ function handlePresetSelect(preset: PresetInfo) {
   showLayoutListDialog.value = false
   activeTab.value = 'layout'
   if (hasCorrectedValues) {
-    toast.showToast('一部の値が自動修正されました', 'success')
+    toast.showToast(t('toast.valuesCorrected'), 'success')
   }
 }
 
@@ -428,7 +435,7 @@ async function loadLayoutFromSource(item: SavedLayoutItem) {
       // ローカルストレージから読み込み
       const content = localStorage.getItem(item.id)
       if (!content) {
-        alert('レイアウトが見つかりません')
+        alert(t('toast.layoutNotFound'))
         return
       }
 
@@ -438,7 +445,7 @@ async function loadLayoutFromSource(item: SavedLayoutItem) {
     } else {
       // Gistから読み込み
       if (!store.githubAuth) {
-        alert('GitHubにログインしてください')
+        alert(t('header.pleaseLoginGitHub'))
         return
       }
 
@@ -446,13 +453,13 @@ async function loadLayoutFromSource(item: SavedLayoutItem) {
       const gist = await service.getGist(item.id)
       const fileKey = item.gistFileKey || Object.keys(gist.files).find(k => k.endsWith('.kls.json'))
       if (!fileKey || !gist.files[fileKey]) {
-        alert('ファイルが見つかりません')
+        alert(t('toast.fileNotFound'))
         return
       }
 
       const content = gist.files[fileKey].content
       if (!content) {
-        alert('ファイル内容を取得できませんでした')
+        alert(t('toast.fileContentEmpty'))
         return
       }
 
@@ -465,10 +472,10 @@ async function loadLayoutFromSource(item: SavedLayoutItem) {
     activeTab.value = 'layout'
 
     if (hasCorrectedValues) {
-      toast.showToast('一部の値が自動修正されました', 'success')
+      toast.showToast(t('toast.valuesCorrected'), 'success')
     }
   } catch (error) {
-    alert('レイアウトの読み込みに失敗しました')
+    alert(t('toast.loadFailed'))
     console.error(error)
   }
 }
@@ -502,7 +509,7 @@ async function handleDeleteConfirm() {
     } else {
       // Gistから削除
       if (!store.githubAuth) {
-        alert('GitHubにログインしてください')
+        alert(t('header.pleaseLoginGitHub'))
         return
       }
       const service = new GitHubService(store.githubAuth.token)
@@ -520,18 +527,19 @@ async function handleDeleteConfirm() {
     showDeleteConfirmDialog.value = false
     layoutToDelete.value = null
   } catch (error) {
-    alert('削除に失敗しました: ' + getGitHubErrorMessage(error))
+    alert(t('toast.deleteFailed', { error: getGitHubErrorMessage(error) }))
     console.error(error)
   }
 }
 
 // 保存処理（saveDestinationに応じてローカルまたはGistに保存）
 async function handleSaveLayout() {
-  try {
-    const content = JSON.stringify(store.layout, null, 2)
-    const filename = `${store.layout.name || 'untitled'}.kls.json`
+  const content = JSON.stringify(store.layout, null, 2)
+  const filename = `${store.layout.name || 'untitled'}.kls.json`
 
-    if (store.saveDestination === 'gist') {
+  if (store.saveDestination === 'gist') {
+    // Gistに保存
+    try {
       if (!store.githubAuth) {
         showGitHubLoginDialog.value = true
         return
@@ -558,17 +566,22 @@ async function handleSaveLayout() {
         )
         store.setLayoutSource('gist', gist.id, filename)
       }
-      toast.showToast('Gistに保存しました')
-    } else {
-      // ローカルストレージに保存
+      toast.showToast(t('toast.savedToGist'))
+    } catch (error) {
+      alert(t('toast.saveFailed', { error: getGitHubErrorMessage(error) }))
+      console.error(error)
+    }
+  } else {
+    // ローカルストレージに保存
+    try {
       const key = STORAGE_KEYS.LAYOUT_PREFIX + (store.layout.name || 'untitled')
       localStorage.setItem(key, content)
       store.setLayoutSource('local')
-      toast.showToast('保存しました')
+      toast.showToast(t('toast.saved'))
+    } catch (error) {
+      alert(t('toast.localStorageError'))
+      console.error(error)
     }
-  } catch (error) {
-    alert('保存に失敗しました: ' + getGitHubErrorMessage(error))
-    console.error(error)
   }
 }
 </script>

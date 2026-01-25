@@ -11,7 +11,7 @@
 
         <!-- バージョン -->
         <div class="text-gray-300">
-          <span class="text-sm">バージョン</span>
+          <span class="text-sm">{{ t('dialogs.about.version') }}</span>
           <span class="ml-2 font-mono">{{ version }}</span>
         </div>
 
@@ -32,7 +32,7 @@
           @click="$emit('cancel')"
           class="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors"
         >
-          閉じる
+          {{ t('common.close') }}
         </button>
       </div>
     </div>
@@ -40,6 +40,10 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 interface Props {
   show: boolean
   version: string

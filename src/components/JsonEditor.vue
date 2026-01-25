@@ -5,14 +5,14 @@
       <!-- ツールバー -->
       <div class="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <span v-if="hasChanges" class="text-xs text-yellow-400">* 未保存</span>
+          <span v-if="hasChanges" class="text-xs text-yellow-400">{{ t('common.unsaved') }}</span>
         </div>
         <div class="flex gap-2">
           <button
             @click="formatJson"
             class="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm transition-colors"
           >
-            整形
+            {{ t('common.format') }}
           </button>
           <button
             @click="resetToLayout"
@@ -23,9 +23,9 @@
                 ? 'bg-orange-600 hover:bg-orange-700 text-white'
                 : 'bg-gray-700 text-gray-500 cursor-not-allowed'
             ]"
-            title="編集内容を破棄してレイアウト画面の状態に戻す"
+            :title="t('jsonEditor.resetTooltip')"
           >
-            リセット
+            {{ t('common.reset') }}
           </button>
           <button
             @click="applyChanges"
@@ -37,7 +37,7 @@
                 : 'bg-gray-700 text-gray-500 cursor-not-allowed'
             ]"
           >
-            適用
+            {{ t('common.apply') }}
           </button>
         </div>
       </div>
@@ -58,7 +58,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <div class="flex-1">
-            <p class="text-sm font-semibold text-red-200">JSONエラー</p>
+            <p class="text-sm font-semibold text-red-200">{{ t('jsonEditor.jsonError') }}</p>
             <p class="text-xs text-red-300 mt-1">{{ error }}</p>
           </div>
           <button @click="error = null" class="text-red-400 hover:text-red-300">
@@ -82,10 +82,10 @@
       <!-- ステータスバー -->
       <div class="px-4 py-2 border-t border-gray-700 flex items-center justify-between text-xs text-gray-400">
         <div>
-          {{ lineCount }} 行, {{ charCount }} 文字
+          {{ lineCount }} {{ t('jsonEditor.lines') }}, {{ charCount }} {{ t('jsonEditor.chars') }}
         </div>
         <div>
-          キー数: {{ keyCount }}
+          {{ t('jsonEditor.keyCount') }} {{ keyCount }}
         </div>
       </div>
     </div>
@@ -97,15 +97,15 @@
         <!-- インポート -->
         <div class="border-b border-gray-700">
           <div class="px-4 py-3">
-            <h2 class="text-lg font-semibold text-white">インポート</h2>
-            <p class="text-sm text-gray-400 mt-1">KLE形式のJSONをインポート</p>
+            <h2 class="text-lg font-semibold text-white">{{ t('jsonEditor.import') }}</h2>
+            <p class="text-sm text-gray-400 mt-1">{{ t('jsonEditor.importDescription') }}</p>
           </div>
           <div class="px-4 pb-4">
             <button
               @click="triggerKLEImport"
               class="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded font-medium transition-colors"
             >
-              KLE形式のJSONをインポート
+              {{ t('jsonEditor.importKLE') }}
             </button>
           </div>
         </div>
@@ -113,8 +113,8 @@
         <!-- エクスポート -->
         <div class="border-b border-gray-700">
           <div class="px-4 py-3">
-            <h2 class="text-lg font-semibold text-white">エクスポート</h2>
-            <p class="text-sm text-gray-400 mt-1">QMK/Vial用のフォーマットでエクスポート</p>
+            <h2 class="text-lg font-semibold text-white">{{ t('jsonEditor.export') }}</h2>
+            <p class="text-sm text-gray-400 mt-1">{{ t('jsonEditor.exportDescription') }}</p>
           </div>
           <div class="px-4 pb-4">
             <div class="space-y-3">
@@ -122,19 +122,19 @@
                 @click="handleExportQMK"
                 class="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded font-medium transition-colors"
               >
-                QMK keyboard.json としてエクスポート
+                {{ t('jsonEditor.exportQMK') }}
               </button>
               <button
                 @click="handleExportVial"
                 class="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded font-medium transition-colors"
               >
-                Vial vial.json としてエクスポート
+                {{ t('jsonEditor.exportVial') }}
               </button>
               <button
                 @click="handleExportKeymapC"
                 class="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded font-medium transition-colors"
               >
-                QMK keymap.c としてエクスポート
+                {{ t('jsonEditor.exportKeymapC') }}
               </button>
             </div>
           </div>
@@ -146,11 +146,14 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useKeyboardStore } from '../stores/keyboard'
 import type { KeyboardLayout } from '../types/keyboard'
 import { exportToQMK, exportToVial, exportToQMKKeymapC, downloadJSON, downloadText } from '../utils/export'
 import { parseKLEJson } from '../utils/kle-import'
 import { showToast } from '../composables/useToast'
+
+const { t } = useI18n()
 
 interface Emits {
   (e: 'switch-to-layout'): void
@@ -211,7 +214,7 @@ function formatJson() {
     jsonText.value = JSON.stringify(parsed, null, 2)
     hasChanges.value = true
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'JSON形式が不正です'
+    error.value = e instanceof Error ? e.message : t('jsonEditor.invalidJson')
   }
 }
 
@@ -227,43 +230,43 @@ function applyChanges() {
 
     // 基本的なバリデーション
     if (!parsed || typeof parsed !== 'object') {
-      throw new Error('ルートオブジェクトが必要です')
+      throw new Error(t('jsonEditor.rootObjectRequired'))
     }
 
     if (!Array.isArray(parsed.keys)) {
-      throw new Error('keysプロパティが配列である必要があります')
+      throw new Error(t('jsonEditor.keysArrayRequired'))
     }
 
     // 各キーの検証
     for (let i = 0; i < parsed.keys.length; i++) {
       const key = parsed.keys[i]
       if (!key.id) {
-        throw new Error(`keys[${i}]: idが必要です`)
+        throw new Error(t('jsonEditor.keyIdRequired', { index: i }))
       }
       if (typeof key.x !== 'number') {
-        throw new Error(`keys[${i}]: xは数値である必要があります`)
+        throw new Error(t('jsonEditor.keyXNumber', { index: i }))
       }
       if (typeof key.y !== 'number') {
-        throw new Error(`keys[${i}]: yは数値である必要があります`)
+        throw new Error(t('jsonEditor.keyYNumber', { index: i }))
       }
       if (typeof key.width !== 'number') {
-        throw new Error(`keys[${i}]: widthは数値である必要があります`)
+        throw new Error(t('jsonEditor.keyWidthNumber', { index: i }))
       }
       if (typeof key.height !== 'number') {
-        throw new Error(`keys[${i}]: heightは数値である必要があります`)
+        throw new Error(t('jsonEditor.keyHeightNumber', { index: i }))
       }
       if (!key.legend || typeof key.legend !== 'object') {
-        throw new Error(`keys[${i}]: legendがオブジェクトである必要があります`)
+        throw new Error(t('jsonEditor.keyLegendObject', { index: i }))
       }
       if (!key.matrix || typeof key.matrix !== 'object') {
-        throw new Error(`keys[${i}]: matrixがオブジェクトである必要があります`)
+        throw new Error(t('jsonEditor.keyMatrixObject', { index: i }))
       }
       // keycodeまたはkeycodesがあればバリデーション（どちらも任意）
       if (key.keycode && typeof key.keycode !== 'string') {
-        throw new Error(`keys[${i}]: keycodeは文字列である必要があります`)
+        throw new Error(t('jsonEditor.keyKeycodeString', { index: i }))
       }
       if (key.keycodes && typeof key.keycodes !== 'object') {
-        throw new Error(`keys[${i}]: keycodesはオブジェクトである必要があります`)
+        throw new Error(t('jsonEditor.keyKeycodesObject', { index: i }))
       }
     }
 
@@ -275,11 +278,11 @@ function applyChanges() {
     error.value = null
 
     if (hasCorrectedValues) {
-      showToast('一部の値が自動修正されました', 'success')
+      showToast(t('toast.valuesCorrected'), 'success')
     }
 
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'JSONの適用に失敗しました'
+    error.value = e instanceof Error ? e.message : t('jsonEditor.applyFailed')
     emit('switch-to-layout')
   }
 }
@@ -311,15 +314,15 @@ function handleKLEFileUpload(event: Event) {
       error.value = null
 
       if (hasCorrectedValues) {
-        showToast('一部の値が自動修正されました', 'success')
+        showToast(t('toast.valuesCorrected'), 'success')
       }
     } catch (err) {
-      error.value = err instanceof Error ? `KLEインポートエラー: ${err.message}` : 'KLE JSONの読み込みに失敗しました'
+      error.value = t('jsonEditor.kleImportError', { message: err instanceof Error ? err.message : t('jsonEditor.kleReadFailed') })
     }
   }
 
   reader.onerror = () => {
-    error.value = 'ファイルの読み込みに失敗しました'
+    error.value = t('jsonEditor.fileReadFailed')
   }
 
   reader.readAsText(file)
@@ -334,9 +337,9 @@ function handleExportQMK() {
     const qmkJson = exportToQMK(store.layout)
     const filename = 'keyboard.json'
     downloadJSON(qmkJson, filename)
-  } catch (error) {
-    console.error('QMKエクスポートエラー:', error)
-    alert('QMKエクスポート中にエラーが発生しました')
+  } catch (err) {
+    console.error('QMK export error:', err)
+    alert(t('jsonEditor.qmkExportError'))
   }
 }
 
@@ -345,9 +348,9 @@ function handleExportVial() {
     const vialJson = exportToVial(store.layout)
     const filename = `vial.json`
     downloadJSON(vialJson, filename)
-  } catch (error) {
-    console.error('Vialエクスポートエラー:', error)
-    alert('Vialエクスポート中にエラーが発生しました')
+  } catch (err) {
+    console.error('Vial export error:', err)
+    alert(t('jsonEditor.vialExportError'))
   }
 }
 
@@ -356,9 +359,9 @@ function handleExportKeymapC() {
     const keymapC = exportToQMKKeymapC(store.layout)
     const filename = 'keymap.c'
     downloadText(keymapC, filename)
-  } catch (error) {
-    console.error('keymap.cエクスポートエラー:', error)
-    const errorMessage = error instanceof Error ? error.message : 'keymap.cエクスポート中にエラーが発生しました'
+  } catch (err) {
+    console.error('keymap.c export error:', err)
+    const errorMessage = err instanceof Error ? err.message : t('jsonEditor.keymapExportError')
     alert(errorMessage)
   }
 }

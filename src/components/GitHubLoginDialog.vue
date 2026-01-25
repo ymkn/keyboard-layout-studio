@@ -6,11 +6,11 @@
   >
     <div class="bg-gray-800 rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
       <h2 class="text-xl font-bold text-white mb-4">
-        <i class="fa-brands fa-github mr-2"></i>GitHubでログイン
+        <i class="fa-brands fa-github mr-2"></i>{{ t('dialogs.githubLogin.title') }}
       </h2>
 
       <p class="text-gray-300 mb-6">
-        GitHubアカウントでログインすると、レイアウトをGistに保存できます。
+        {{ t('dialogs.githubLogin.description') }}
       </p>
 
       <!-- OAuth Login Button -->
@@ -22,7 +22,7 @@
         >
           <i v-if="loading" class="fa-solid fa-spinner fa-spin mr-2"></i>
           <i v-else class="fa-brands fa-github mr-2"></i>
-          {{ loading ? '認証中...' : 'GitHubでログイン' }}
+          {{ loading ? t('dialogs.githubLogin.authenticating') : t('dialogs.githubLogin.loginButton') }}
         </button>
       </div>
 
@@ -34,7 +34,7 @@
       <!-- Note -->
       <p class="text-gray-500 text-xs mb-4">
         <i class="fa-solid fa-lock mr-1"></i>
-        GitHubのOAuth認証を使用します。Gistの読み書き権限のみをリクエストします。
+        {{ t('dialogs.githubLogin.oauthNote') }}
       </p>
 
       <!-- Actions -->
@@ -44,7 +44,7 @@
           class="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors"
           :disabled="loading"
         >
-          キャンセル
+          {{ t('common.cancel') }}
         </button>
       </div>
     </div>
@@ -53,7 +53,10 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { startOAuthFlow, isGitHubIntegrationConfigured, GITHUB_NOT_CONFIGURED_MESSAGE } from '../services/github'
+import { useI18n } from 'vue-i18n'
+import { startOAuthFlow, isGitHubIntegrationConfigured } from '../services/github'
+
+const { t } = useI18n()
 
 defineProps<{
   show: boolean
@@ -68,7 +71,7 @@ const error = ref<string | null>(null)
 
 async function onOAuthLogin() {
   if (!isGitHubIntegrationConfigured()) {
-    error.value = GITHUB_NOT_CONFIGURED_MESSAGE
+    error.value = t('github.notConfigured')
     return
   }
   const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID
@@ -82,7 +85,7 @@ async function onOAuthLogin() {
     const authUrl = startOAuthFlow(clientId, redirectUri)
     window.location.href = authUrl
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'OAuth認証の開始に失敗しました'
+    error.value = err instanceof Error ? err.message : t('dialogs.githubLogin.oauthError')
     setTimeout(() => error.value = null, 5000)
   } finally {
     loading.value = false

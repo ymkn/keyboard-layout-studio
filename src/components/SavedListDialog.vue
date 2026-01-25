@@ -2,7 +2,7 @@
   <div v-if="show" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
       <div class="p-6 border-b border-gray-700">
-        <h2 class="text-xl font-bold text-white">レイアウトを開く</h2>
+        <h2 class="text-xl font-bold text-white">{{ t('dialogs.openLayout.title') }}</h2>
       </div>
 
       <!-- タブ -->
@@ -17,7 +17,7 @@
           ]"
         >
           <i class="fa-solid fa-hard-drive mr-2"></i>
-          ローカル
+          {{ t('dialogs.openLayout.tabLocal') }}
           <span class="ml-2 px-2 py-0.5 bg-gray-600 rounded text-xs">{{ localItems.length }}</span>
         </button>
         <button
@@ -30,7 +30,7 @@
           ]"
         >
           <i class="fa-brands fa-github mr-2"></i>
-          Gist
+          {{ t('dialogs.openLayout.tabGist') }}
           <span v-if="isLoggedIn" class="ml-2 px-2 py-0.5 bg-gray-600 rounded text-xs">{{ gistItems.length }}</span>
         </button>
         <button
@@ -43,7 +43,7 @@
           ]"
         >
           <i class="fa-solid fa-shapes mr-2"></i>
-          プリセット
+          {{ t('dialogs.openLayout.tabPreset') }}
           <span class="ml-2 px-2 py-0.5 bg-gray-600 rounded text-xs">{{ presets.length }}</span>
         </button>
       </div>
@@ -52,7 +52,7 @@
         <!-- プリセットタブ -->
         <template v-if="activeTab === 'preset'">
           <div v-if="presets.length === 0" class="text-center py-8">
-            <div class="text-gray-400">プリセットがありません</div>
+            <div class="text-gray-400">{{ t('dialogs.openLayout.noPresets') }}</div>
           </div>
 
           <div v-else class="space-y-2">
@@ -72,7 +72,7 @@
                 <div class="ml-4 flex-shrink-0">
                   <span class="px-2 py-1 bg-blue-600 text-white rounded text-xs">
                     <i class="fa-solid fa-shapes mr-1"></i>
-                    テンプレート
+                    {{ t('dialogs.openLayout.template') }}
                   </span>
                 </div>
               </div>
@@ -83,11 +83,11 @@
         <!-- ローカルタブ -->
         <template v-else-if="activeTab === 'local'">
           <div v-if="loading" class="text-center py-8">
-            <div class="text-gray-400">読み込み中...</div>
+            <div class="text-gray-400">{{ t('common.loading') }}</div>
           </div>
 
           <div v-else-if="localItems.length === 0" class="text-center py-8">
-            <div class="text-gray-400">保存されたレイアウトがありません</div>
+            <div class="text-gray-400">{{ t('dialogs.openLayout.noLocalLayouts') }}</div>
           </div>
 
           <div v-else class="space-y-2">
@@ -104,14 +104,14 @@
                     {{ item.description }}
                   </p>
                   <p class="text-gray-500 text-xs mt-2">
-                    更新日時: {{ formatDate(item.updatedAt) }}
+                    {{ t('dialogs.openLayout.updatedAt') }} {{ formatDate(item.updatedAt) }}
                   </p>
                 </div>
                 <div class="flex gap-2 ml-4">
                   <button
                     @click.stop="$emit('delete', item)"
                     class="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                    title="削除"
+                    :title="t('common.delete')"
                   >
                     <i class="fa-solid fa-trash-can"></i>
                   </button>
@@ -127,27 +127,27 @@
           <div v-if="!isGitHubConfigured" class="text-center py-8">
             <div class="text-gray-400 mb-4">
               <i class="fa-solid fa-circle-exclamation text-4xl mb-4 block text-yellow-500"></i>
-              {{ GITHUB_NOT_CONFIGURED_MESSAGE }}
+              {{ t('github.notConfigured') }}
             </div>
           </div>
           <!-- 未ログイン時 -->
           <div v-else-if="!isLoggedIn" class="text-center py-8">
-            <div class="text-gray-400 mb-4">
+            <div class="text-gray-400 mb-4 whitespace-pre-line">
               <i class="fa-brands fa-github text-4xl mb-4 block"></i>
-              Gistからレイアウトを読み込むには<br>GitHubにログインしてください
+              {{ t('dialogs.openLayout.gistLoginRequired') }}
             </div>
             <button
               @click="$emit('login')"
               class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
             >
               <i class="fa-brands fa-github mr-2"></i>
-              GitHubでログイン
+              {{ t('header.loginWithGitHub') }}
             </button>
           </div>
 
           <template v-else>
             <div v-if="loading" class="text-center py-8">
-              <div class="text-gray-400">読み込み中...</div>
+              <div class="text-gray-400">{{ t('common.loading') }}</div>
             </div>
 
             <div v-else-if="error" class="text-center py-8">
@@ -155,7 +155,7 @@
             </div>
 
             <div v-else-if="gistItems.length === 0" class="text-center py-8">
-              <div class="text-gray-400">Gistにレイアウトがありません</div>
+              <div class="text-gray-400">{{ t('dialogs.openLayout.noGistLayouts') }}</div>
             </div>
 
             <div v-else class="space-y-2">
@@ -172,14 +172,14 @@
                       {{ item.description }}
                     </p>
                     <p class="text-gray-500 text-xs mt-2">
-                      更新日時: {{ formatDate(item.updatedAt) }}
+                      {{ t('dialogs.openLayout.updatedAt') }} {{ formatDate(item.updatedAt) }}
                     </p>
                   </div>
                   <div class="flex gap-2 ml-4">
                     <button
                       @click.stop="$emit('delete', item)"
                       class="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                      title="削除"
+                      :title="t('common.delete')"
                     >
                       <i class="fa-solid fa-trash-can"></i>
                     </button>
@@ -196,7 +196,7 @@
           @click="$emit('cancel')"
           class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
         >
-          キャンセル
+          {{ t('common.cancel') }}
         </button>
       </div>
     </div>
@@ -205,9 +205,12 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { SavedLayoutItem } from '../types/github'
-import { isGitHubIntegrationConfigured, GITHUB_NOT_CONFIGURED_MESSAGE } from '../services/github'
+import { isGitHubIntegrationConfigured } from '../services/github'
 import { getPresets, type PresetInfo } from '../services/presets'
+
+const { t } = useI18n()
 
 type TabType = 'preset' | 'local' | 'gist'
 

@@ -8,6 +8,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { StorageSource, GitHubAuth } from '../types/github'
 import { STORAGE_KEYS } from '../constants/storage'
+import { i18n } from '../i18n'
+import { showToast } from '../composables/useToast'
 
 export const useAuthStore = defineStore('auth', () => {
   // State
@@ -26,10 +28,15 @@ export const useAuthStore = defineStore('auth', () => {
   // Actions
   function setGitHubAuth(auth: GitHubAuth | null) {
     githubAuth.value = auth
-    if (auth) {
-      localStorage.setItem(STORAGE_KEYS.GITHUB_AUTH, JSON.stringify(auth))
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.GITHUB_AUTH)
+    try {
+      if (auth) {
+        localStorage.setItem(STORAGE_KEYS.GITHUB_AUTH, JSON.stringify(auth))
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.GITHUB_AUTH)
+      }
+    } catch {
+      // localStorage容量不足エラー
+      showToast(i18n.global.t('toast.localStorageError'), 'error', 5000)
     }
   }
 

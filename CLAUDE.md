@@ -118,6 +118,7 @@ STORAGE_KEYS.GITHUB_AUTH       // 'kls-github-auth' - GitHub認証(localStorage)
 STORAGE_KEYS.LAYOUT_PREFIX     // 'kls-layout-' - レイアウト保存プレフィックス
 STORAGE_KEYS.OAUTH_STATE       // 'kls-oauth-state' - OAuth state(sessionStorage)
 STORAGE_KEYS.OAUTH_REDIRECT_URI // 'kls-oauth-redirect-uri' - OAuth redirect URI
+STORAGE_KEYS.LOCALE            // 'kls-locale' - 言語設定(localStorage)
 ```
 
 ### Composables (`src/composables/`)
@@ -148,6 +149,41 @@ STORAGE_KEYS.OAUTH_REDIRECT_URI // 'kls-oauth-redirect-uri' - OAuth redirect URI
 - `showToast(message, type, duration)` - トースト表示
 - `hideToast()` - トースト非表示
 - `useToast()` - Composable本体（状態とメソッドを返す）
+
+**`useLocale.ts`** - 言語切り替え:
+- `currentLocale` - 現在の言語設定
+- `availableLocales` - 利用可能な言語一覧
+- `setLocale(locale)` - 言語変更（LocalStorageにも保存）
+
+### i18n（多言語対応）
+
+**ファイル構成**:
+- `src/i18n/index.ts` - vue-i18n設定、言語検出ロジック
+- `src/i18n/locales/ja.ts` - 日本語翻訳
+- `src/i18n/locales/en.ts` - 英語翻訳
+- `src/composables/useLocale.ts` - 言語切り替えComposable
+- `src/components/LanguageSelector.vue` - 言語選択UI
+
+**設計原則**:
+- **アプリの言語設定が優先**: 日付フォーマットなどロケール依存の処理はすべてアプリの言語設定（`locale.value`）に従う。ブラウザの言語設定は初期値の決定にのみ使用
+- **規約ベースのキー命名**: 形状名など他ファイルで定義された識別子をロケールキーとして使用（例: `shapes.${shape}`, `shapes.${shape}-desc`）。マッピングオブジェクトを避け、新規追加時のコード修正を最小化
+- **言語名はLanguageSelectorで一元管理**: 各言語のネイティブ表記（日本語、Englishなど）は翻訳不要のため、ロケールファイルではなくLanguageSelector.vue内で定義
+
+**使用方法**:
+```typescript
+import { useI18n } from 'vue-i18n'
+
+const { t, locale } = useI18n()
+
+// 翻訳テキスト取得
+t('propertyPanel.title')
+t('toast.saveFailed', { error: message })  // パラメータ付き
+
+// アプリの言語設定でフォーマット
+date.toLocaleString(locale.value, { ... })
+```
+
+**ストレージ**: `STORAGE_KEYS.LOCALE` (`'kls-locale'`) にLocalStorageで保存
 
 ### Data Model (`src/types/keyboard.ts`)
 

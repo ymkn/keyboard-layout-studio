@@ -5,7 +5,7 @@
         @click="store.addKey()"
         class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors text-sm"
       >
-        <i class="fa-solid fa-plus"></i> キーを追加
+        <i class="fa-solid fa-plus"></i> {{ t('common.addKey') }}
       </button>
       <button
         @click="store.copySelectedKeys()"
@@ -18,7 +18,7 @@
         ]"
         title="Ctrl+C"
       >
-        <i class="fa-solid fa-copy"></i> コピー
+        <i class="fa-solid fa-copy"></i> {{ t('common.copy') }}
       </button>
       <button
         @click="store.pasteKeys()"
@@ -31,7 +31,7 @@
         ]"
         title="Ctrl+V"
       >
-        <i class="fa-solid fa-paste"></i> ペースト
+        <i class="fa-solid fa-paste"></i> {{ t('common.paste') }}
       </button>
       <button
         @click="store.deleteSelectedKeys()"
@@ -44,7 +44,7 @@
         ]"
         title="Delete"
       >
-        <i class="fa-solid fa-trash"></i> 削除
+        <i class="fa-solid fa-trash"></i> {{ t('common.delete') }}
       </button>
 
       <div class="border-l border-gray-600 h-8 mx-2"></div>
@@ -60,7 +60,7 @@
         ]"
         title="Ctrl+Z"
       >
-        <i class="fa-solid fa-rotate-left"></i> 元に戻す
+        <i class="fa-solid fa-rotate-left"></i> {{ t('common.undo') }}
       </button>
       <button
         @click="store.redo()"
@@ -73,7 +73,7 @@
         ]"
         title="Ctrl+Y"
       >
-        <i class="fa-solid fa-rotate-right"></i> やり直す
+        <i class="fa-solid fa-rotate-right"></i> {{ t('common.redo') }}
       </button>
 
       <div class="flex-1"></div>
@@ -82,7 +82,7 @@
       <button
         @click="showScreenshotDialog = true"
         class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors text-sm"
-        title="撮影モード"
+        :title="t('canvas.screenshotMode')"
       >
         <i class="fa-solid fa-camera"></i>
       </button>
@@ -98,7 +98,7 @@
               : 'bg-transparent text-gray-300 hover:text-white'
           ]"
         >
-          レジェンド
+          {{ t('canvas.legend') }}
         </button>
         <button
           @click="store.toggleDisplayMode()"
@@ -109,14 +109,14 @@
               : 'bg-transparent text-gray-300 hover:text-white'
           ]"
         >
-          行列・キーコード
+          {{ t('canvas.matrixKeycode') }}
         </button>
       </div>
     </div>
 
     <!-- レイヤー選択行 -->
     <div class="flex gap-2 items-center bg-gray-900 px-4 py-3">
-      <span class="text-sm text-gray-400">レイヤー:</span>
+      <span class="text-sm text-gray-400">{{ t('canvas.layer') }}</span>
 
       <!-- レイヤーボタン（0, 1, 2, ...） -->
       <div class="flex gap-1">
@@ -147,7 +147,7 @@
             ? 'bg-red-600 text-white hover:bg-red-700'
             : 'bg-gray-800 text-gray-600 cursor-not-allowed'
         ]"
-        title="レイヤーを削除"
+        :title="t('canvas.deleteLayer')"
       >
         -
       </button>
@@ -160,7 +160,7 @@
             ? 'bg-green-600 text-white hover:bg-green-700'
             : 'bg-gray-800 text-gray-600 cursor-not-allowed'
         ]"
-        title="レイヤーを追加"
+        :title="t('canvas.addLayer')"
       >
         +
       </button>
@@ -248,6 +248,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useKeyboardStore } from '../stores/keyboard'
 import KeyComponent from './KeyComponent.vue'
 import ScreenshotDialog from './ScreenshotDialog.vue'
@@ -255,6 +256,7 @@ import { RENDERING } from '../constants/rendering'
 import { useDragSelection } from '../composables/useDragSelection'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 
+const { t } = useI18n()
 const store = useKeyboardStore()
 
 // キーボードショートカット

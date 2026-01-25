@@ -12,7 +12,7 @@
           @click="onCancel"
           class="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors"
         >
-          キャンセル
+          {{ t('common.cancel') }}
         </button>
         <button
           @click="onConfirm"
@@ -26,6 +26,10 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 defineProps<{
   show: boolean
   title: string

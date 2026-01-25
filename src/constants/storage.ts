@@ -13,6 +13,9 @@ export const STORAGE_KEYS = {
 
   /** OAuth redirect URI（SessionStorage） */
   OAUTH_REDIRECT_URI: 'kls-oauth-redirect-uri',
+
+  /** 言語設定（LocalStorage） */
+  LOCALE: 'kls-locale',
 } as const
 
 export type StorageKeys = typeof STORAGE_KEYS
