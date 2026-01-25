@@ -33,9 +33,11 @@ GitHub OAuth Appは1つのCallback URLしか設定できないため、**開発�
 1. https://github.com/settings/applications/new にアクセス
 2. 以下を設定：
    - **Application name**: Keyboard Layout Studio (Dev)
-   - **Homepage URL**: `http://localhost:5173`
-   - **Authorization callback URL**: `http://localhost:5173/`
+   - **Homepage URL**: `http://localhost:5173/keyboard-layout-studio/`
+   - **Authorization callback URL**: `http://localhost:5173/keyboard-layout-studio/`
 3. 作成後、**Client ID**と**Client Secret**をメモ
+
+**注意**: Viteの`base`設定が`/keyboard-layout-studio/`のため、開発環境でもこのパスが必要です。
 
 #### 本番用OAuth App
 

@@ -524,7 +524,13 @@ Located in `workers/oauth-token-exchange/`:
 
 **Environments:**
 GitHub OAuth Appは1つのRedirect URLしか設定できないため、開発用と本番用で別々のOAuth Appが必要。
-Workerも環境ごとに分離されている:
+Workerも環境ごとに分離されている。
+
+**重要**: OAuth AppのCallback URLは`/callback`などの別パスではなく、アプリのベースURL（末尾スラッシュ付き）を指定する。
+- 開発環境: `http://localhost:5173/keyboard-layout-studio/`（Viteのbase設定に依存）
+- 本番環境: `https://your-domain.com/keyboard-layout-studio/`
+
+Workerの環境:
 - 本番環境: `kls-oauth-worker` (`npx wrangler deploy`)
 - 開発環境: `kls-oauth-worker-development` (`npx wrangler deploy --env development`)
 
