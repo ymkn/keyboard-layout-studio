@@ -418,14 +418,15 @@
       <div class="property-section">
         <h3 class="text-sm font-semibold text-gray-300 mb-2">{{ t('propertyPanel.keycode') }}</h3>
         <div class="flex gap-2">
-          <input
-            :ref="(el) => setInputRef(el, 'keycode')"
-            type="text"
-            :value="store.selectedKey.keycodes?.[store.currentLayer] || ''"
-            @input="updateKeycode"
-            @keydown.enter="handleEnterKey('keycode')"
+          <KeycodeSuggest
+            ref="keycodeSuggestRef"
+            class="flex-1"
+            :model-value="store.selectedKey.keycodes?.[store.currentLayer] || ''"
+            @update:model-value="onKeycodeInput"
+            @select="onKeycodeSelect"
+            @enter="onKeycodeEnter"
             :placeholder="t('propertyPanel.keycodePlaceholder')"
-            class="flex-1 px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-sm font-mono"
+            input-class="w-full px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-sm font-mono"
           />
           <button
             @click="showKeycodeDialog = true"
@@ -446,7 +447,7 @@
     <!-- キーコードピッカーダイアログ -->
     <KeycodePickerDialog
       v-model="showKeycodeDialog"
-      @select="onKeycodeSelect"
+      @select="onDialogKeycodeSelect"
     />
   </div>
 </template>
@@ -459,6 +460,7 @@ import { getKeycodeLabel } from '../data/keycodes'
 import { SHAPE_PRESETS } from '../data/shape-presets'
 import type { KeyShape, LegendFont } from '../types/keyboard'
 import KeycodePickerDialog from './KeycodePickerDialog.vue'
+import KeycodeSuggest from './KeycodeSuggest.vue'
 import {
   processNumericField,
   processTextField,
@@ -478,6 +480,7 @@ const props = defineProps<{
 
 const store = useKeyboardStore()
 const showKeycodeDialog = ref(false)
+const keycodeSuggestRef = ref<InstanceType<typeof KeycodeSuggest> | null>(null)
 
 // 各入力欄のref（動的ref）
 const inputRefs = ref<Record<string, HTMLInputElement | null>>({})
@@ -666,10 +669,8 @@ function updateMatrix(field: 'row' | 'col', event: Event) {
   store.updateKey(store.selectedKey.id, update)
 }
 
-function updateKeycode(event: Event) {
+function onKeycodeInput(value: string) {
   if (!store.selectedKey) return
-
-  const value = (event.target as HTMLInputElement).value
   const update = getKeycodeFieldUpdate(store.selectedKey.keycodes, store.currentLayer, value)
   store.updateKey(store.selectedKey.id, update)
 }
@@ -679,6 +680,22 @@ function onKeycodeSelect(keycode: string) {
 
   const update = getKeycodeFieldUpdate(store.selectedKey.keycodes, store.currentLayer, keycode)
   store.updateKey(store.selectedKey.id, update)
+}
+
+function onDialogKeycodeSelect(keycode: string) {
+  onKeycodeSelect(keycode)
+  nextTick(() => {
+    keycodeSuggestRef.value?.select()
+  })
+}
+
+function onKeycodeEnter() {
+  const moved = store.selectNextKey()
+  if (moved) {
+    nextTick(() => {
+      keycodeSuggestRef.value?.select()
+    })
+  }
 }
 
 // フォーカスイン時に有効な値を保存

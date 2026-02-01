@@ -269,6 +269,21 @@ export const keycodeCategories: KeycodeCategory[] = [
 ]
 
 /**
+ * クエリ文字列でキーコードを全カテゴリから検索
+ */
+export function searchKeycodes(query: string): Keycode[] {
+  const q = query.toLowerCase().trim()
+  if (!q) return []
+  return keycodeCategories
+    .flatMap(category => category.keycodes)
+    .filter(keycode =>
+      keycode.code.toLowerCase().includes(q) ||
+      keycode.label.toLowerCase().includes(q) ||
+      (keycode.description?.toLowerCase().includes(q) ?? false)
+    )
+}
+
+/**
  * キーコードを検索
  */
 export function findKeycode(code: string): Keycode | undefined {

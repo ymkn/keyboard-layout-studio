@@ -49,6 +49,7 @@ All mutations update `metadata.modified` and save to history automatically.
 | `src/utils/key-sanitizer.ts` | バリデーション/サニタイズの一元化 |
 | `src/types/keyboard.ts` | Key, KeyboardLayout等の型定義 |
 | `src/types/persistence.ts` | 永続化対象 vs ランタイム専用の型区別 |
+| `src/data/keycodes.ts` | キーコードデータ定義・検索（`searchKeycodes()`） |
 
 ## 設計原則
 

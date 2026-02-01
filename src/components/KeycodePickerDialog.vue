@@ -98,7 +98,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { keycodeCategories } from '../data/keycodes'
+import { keycodeCategories, searchKeycodes } from '../data/keycodes'
 import { getKeycodeLabel } from '../data/keycode-labels'
 import { useKeyboardStore } from '../stores/keyboard'
 
@@ -125,22 +125,13 @@ const currentCategory = computed(() => {
 })
 
 const filteredKeycodes = computed(() => {
-  const query = searchQuery.value.toLowerCase().trim()
+  const query = searchQuery.value.trim()
 
   if (!query) {
     return currentCategory.value.keycodes
   }
 
-  // 検索時は全カテゴリから検索
-  return keycodeCategories
-    .flatMap(category => category.keycodes)
-    .filter(keycode => {
-      return (
-        keycode.code.toLowerCase().includes(query) ||
-        keycode.label.toLowerCase().includes(query) ||
-        (keycode.description?.toLowerCase().includes(query) || false)
-      )
-    })
+  return searchKeycodes(query)
 })
 
 function selectKeycode(code: string) {

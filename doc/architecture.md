@@ -15,7 +15,7 @@ src/
 ├── components/        # Vue components
 ├── composables/       # Reusable composition functions
 ├── constants/         # Application constants
-├── data/              # Static data (keycodes, presets)
+├── data/              # Static data (keycodes with search, presets)
 ├── services/          # External services (GitHub API)
 ├── stores/            # Pinia stores
 ├── templates/         # Export templates (QMK, Vial)
@@ -260,7 +260,7 @@ Main application layout with header and tab system. Handles LocalStorage save/lo
 ### PropertyPanel.vue
 
 - No selection: Layout metadata editor
-- Single key: Key property editors (shape, position, size, rotation, legend, matrix, keycode)
+- Single key: Key property editors (shape, position, size, rotation, legend, matrix, keycode with inline suggest)
 - Multiple keys: Info message only
 
 ### JsonEditor.vue
@@ -270,9 +270,16 @@ Main application layout with header and tab system. Handles LocalStorage save/lo
 - Export to QMK/Vial formats
 - Download KLS native format
 
+### KeycodeSuggest.vue
+
+- Inline keycode input with incremental search suggestions
+- Searches by code, label, and description via `searchKeycodes()`
+- Suggestion list opens upward (above input) to avoid viewport overflow
+- Keyboard navigation (Arrow Up/Down, Enter, Escape)
+
 ### Dialog Components
 
-- **KeycodePickerDialog**: QMK keycode selection
+- **KeycodePickerDialog**: QMK keycode selection (category-based browsing)
 - **ConfirmDialog**: Confirmation for destructive actions
 - **SavedListDialog**: Saved layouts from LocalStorage/Gist
 - **GitHubLoginDialog**: GitHub OAuth authentication
