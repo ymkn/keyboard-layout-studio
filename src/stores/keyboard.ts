@@ -29,6 +29,26 @@ export { useEditorStore } from './editor'
 export { useHistoryStore } from './history'
 export { useAuthStore } from './auth'
 
+/**
+ * 既存IDと重複しないキーIDを作成する
+ */
+function createUniqueKeyId(baseId: string, usedIds: Set<string>): string {
+  if (!usedIds.has(baseId)) {
+    usedIds.add(baseId)
+    return baseId
+  }
+
+  let suffix = 2
+  let candidate = `${baseId}-${suffix}`
+  while (usedIds.has(candidate)) {
+    suffix++
+    candidate = `${baseId}-${suffix}`
+  }
+
+  usedIds.add(candidate)
+  return candidate
+}
+
 export const useKeyboardStore = defineStore('keyboard', () => {
   // 分割されたストアを取得
   const layoutStore = useLayoutStore()
@@ -155,6 +175,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
     const newKeyIds: string[] = []
     const baseTime = Date.now()
+    const usedIds = new Set(layoutStore.keys.map(key => key.id))
 
     // 選択中のキーがある場合、最初のキーの右隣を基準に配置
     let baseX = 0
@@ -171,7 +192,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     const minY = Math.min(...copied.map(k => k.y))
 
     const newKeys: Key[] = copied.map((copiedKey, index) => {
-      const newId = String(baseTime + index)
+      const newId = createUniqueKeyId(String(baseTime + index), usedIds)
       newKeyIds.push(newId)
       return {
         ...copiedKey,

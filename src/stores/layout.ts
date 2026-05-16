@@ -9,6 +9,7 @@ import type { Key, KeyboardLayout, LegendFont } from '../types/keyboard'
 import { getPresets } from '../services/presets'
 import { APP_CONFIG } from '../constants/app-config'
 import { sanitizeKeyGeometry, sanitizeTextField } from '../utils/key-sanitizer'
+import { sortKeysByPhysicalPosition } from '../utils/key-order'
 
 /**
  * 旧形式のキーデータ（keycodeフィールドを持つ）
@@ -53,6 +54,51 @@ function getInitialLayout(): KeyboardLayout {
       created: new Date().toISOString(),
       modified: new Date().toISOString()
     }
+  }
+}
+
+/**
+ * キーIDを既存IDと重複しない値にする
+ */
+function getUniqueKeyId(preferredId: string, usedIds: Set<string>, fallbackNumber: number): string {
+  const baseId = preferredId || String(fallbackNumber)
+  if (!usedIds.has(baseId)) {
+    return baseId
+  }
+
+  let suffix = 2
+  let candidate = `${baseId}-${suffix}`
+  while (usedIds.has(candidate)) {
+    suffix++
+    candidate = `${baseId}-${suffix}`
+  }
+
+  return candidate
+}
+
+/**
+ * レイアウト内のキーID重複を補正する
+ */
+function ensureUniqueKeyIds(keys: Key[]): { keys: Key[]; hasCorrected: boolean } {
+  const usedIds = new Set<string>()
+  let hasCorrected = false
+
+  return {
+    keys: keys.map((key, index) => {
+      const uniqueId = getUniqueKeyId(key.id, usedIds, index + 1)
+      usedIds.add(uniqueId)
+
+      if (uniqueId === key.id) {
+        return key
+      }
+
+      hasCorrected = true
+      return {
+        ...key,
+        id: uniqueId
+      }
+    }),
+    hasCorrected
   }
 }
 
@@ -184,7 +230,8 @@ export const useLayoutStore = defineStore('layout', () => {
   }
 
   function addKey(x: number = 0, y: number = 0): string {
-    const newId = String(Date.now())
+    const usedIds = new Set(layout.value.keys.map(key => key.id))
+    const newId = getUniqueKeyId(String(Date.now()), usedIds, layout.value.keys.length + 1)
     const newKey: Key = {
       id: newId,
       x,
@@ -253,7 +300,7 @@ export const useLayoutStore = defineStore('layout', () => {
     }
 
     // 各キーの古い形式を新形式に変換し、値をサニタイズ
-    clonedLayout.keys = (clonedLayout.keys as unknown[]).map((key): Key => {
+    clonedLayout.keys = (clonedLayout.keys as unknown[]).map((key, index): Key => {
       let convertedKey: Key
 
       if (isLegacyKey(key)) {
@@ -269,6 +316,14 @@ export const useLayoutStore = defineStore('layout', () => {
           : { ...currentKey, keycodes: {} }
       }
 
+      if (!convertedKey.id) {
+        convertedKey = {
+          ...convertedKey,
+          id: String(index + 1)
+        }
+        hasCorrectedValues = true
+      }
+
       // 座標・サイズのサニタイズ
       const { sanitized, hasCorrected } = sanitizeKeyGeometry(convertedKey)
       if (hasCorrected) {
@@ -277,6 +332,12 @@ export const useLayoutStore = defineStore('layout', () => {
 
       return sanitized
     })
+
+    const uniqueIdResult = ensureUniqueKeyIds(clonedLayout.keys)
+    clonedLayout.keys = uniqueIdResult.keys
+    if (uniqueIdResult.hasCorrected) {
+      hasCorrectedValues = true
+    }
 
     layout.value = clonedLayout
     return hasCorrectedValues
@@ -383,7 +444,7 @@ export const useLayoutStore = defineStore('layout', () => {
   }
 
   function getKeysByIds(keyIds: string[]): Key[] {
-    return layout.value.keys.filter(k => keyIds.includes(k.id))
+    return sortKeysByPhysicalPosition(layout.value.keys.filter(k => keyIds.includes(k.id)))
   }
 
   return {

@@ -8,6 +8,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Key } from '../types/keyboard'
 import { useLayoutStore } from './layout'
+import { sortKeysByPhysicalPosition } from '../utils/key-order'
 
 export type DisplayMode = 'legend' | 'matrix'
 export type KeyboardLayoutType = 'ANSI' | 'JIS'
@@ -66,7 +67,7 @@ export const useEditorStore = defineStore('editor', () => {
     if (selectedKeyIds.value.length !== 1) return false
 
     const currentId = selectedKeyIds.value[0]
-    const keys = layoutStore.keys
+    const keys = sortKeysByPhysicalPosition(layoutStore.keys)
     const currentIndex = keys.findIndex(k => k.id === currentId)
 
     if (currentIndex === -1) return false

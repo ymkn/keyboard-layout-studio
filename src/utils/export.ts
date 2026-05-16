@@ -1,6 +1,7 @@
 import type { KeyboardLayout, Key } from '../types/keyboard'
 import qmkTemplate from '../templates/qmk-keyboard-template.json'
 import vialTemplate from '../templates/vial-template.json'
+import { sortKeysByPhysicalPosition } from './key-order'
 
 /**
  * QMKレイアウトのキー形式
@@ -44,7 +45,7 @@ export function exportToQMK(layout: KeyboardLayout): string {
   }
 
   // レイアウトデータを変換
-  const qmkLayout = layout.keys.map(key => convertToQMKLayout(key))
+  const qmkLayout = sortKeysByPhysicalPosition(layout.keys).map(key => convertToQMKLayout(key))
   qmkData.layouts.LAYOUT.layout = qmkLayout
 
   // 行列のピン数を計算（最大値+1）
@@ -124,7 +125,7 @@ function convertToVialLayout(keys: Key[]): VialRowElement[][] {
   // y座標でグループ化して行に分ける
   const rowMap = new Map<number, Key[]>()
 
-  keys.forEach(key => {
+  sortKeysByPhysicalPosition(keys).forEach(key => {
     const rowKeys = rowMap.get(key.y) || []
     rowKeys.push(key)
     rowMap.set(key.y, rowKeys)
@@ -211,12 +212,7 @@ export function exportToQMKKeymapC(layout: KeyboardLayout): string {
 
   // キーを物理的な位置（y座標→x座標）の順序でソート
   // LAYOUTマクロはkeyboard.jsonの物理配置順序に従う
-  const sortedKeys = [...keysWithMatrix].sort((a, b) => {
-    if (a.y !== b.y) {
-      return a.y - b.y
-    }
-    return a.x - b.x
-  })
+  const sortedKeys = sortKeysByPhysicalPosition(keysWithMatrix)
 
   // 各レイヤーのkeymap配列を生成
   const layers: string[] = []
