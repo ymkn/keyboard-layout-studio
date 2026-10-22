@@ -292,7 +292,9 @@ npm audit --omit=dev
 npm audit
 ```
 
-テストはGitHub通信・Cloudflare Rate Limiting bindingを模擬します。実環境でのGitHubログインやCloudflare側設定の確認を置き換えるものではありません。
+単体テストではGitHub通信・Cloudflare Rate Limiting bindingを模擬します。加えてMiniflare（workerd）上で実際のfetch処理を通し、ローカルのGitHub代替WorkerへのPKCE付き交換と、301/302/303/307/308の追従拒否を検証します。実環境でのGitHubログインやCloudflare側設定の確認を置き換えるものではありません。
+
+Workersのfetchでは `redirect: 'error'` が未対応で、通信前にTypeErrorになります。Worker側は `redirect: 'manual'` とHTTPステータス検証を組み合わせ、Client Secretをリダイレクト先へ転送しないようにします。ブラウザ側のfetchは `redirect: 'error'` を使用できます。
 
 2026-10-22時点の更新後、実行時依存の `npm audit --omit=dev` は警告0件です。全依存の監査にはTailwind CSS 3系の開発・ビルド専用依存に7パッケージ分（high 5、moderate 2）の警告が残ります。主因は修正版未公開の `braces`（[GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)）と旧 `postcss-selector-parser` です。これらはWorkerにバンドルされず、公開APIから呼び出す経路はありません。不審なソース・ビルド設定をビルドしないでください。警告解消にはTailwind CSS 4系への移行など、表示互換性の検証を伴う別の更新が必要です。監査結果は随時変わるため、上記コマンドで再確認してください。
 

@@ -115,7 +115,8 @@ async function exchangeToken(request: Request, env: Env, allowedRedirects: URL[]
 
   const response = await fetch('https://github.com/login/oauth/access_token', {
     method: 'POST',
-    redirect: 'error',
+    // Workersはerrorモード非対応。追従せず、3xxも下のステータス検証で拒否する
+    redirect: 'manual',
     signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',

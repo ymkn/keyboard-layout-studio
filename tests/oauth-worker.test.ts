@@ -69,7 +69,7 @@ describe('OAuth token Worker', () => {
     expect(limitMock).toHaveBeenCalledWith({ key: 'kls:oauth:token:192.0.2.1' })
     const [url, init] = fetchMock.mock.calls[0]!
     expect(url).toBe('https://github.com/login/oauth/access_token')
-    expect(init?.redirect).toBe('error')
+    expect(init?.redirect).toBe('manual')
     expect(init?.signal).toBeInstanceOf(AbortSignal)
     expect(Object.fromEntries(init?.body as URLSearchParams)).toEqual({
       client_id: env.GITHUB_CLIENT_ID,
@@ -227,6 +227,18 @@ describe('OAuth token Worker', () => {
     const response = await worker.fetch(post(), env)
     expect(response.status).toBe(502)
     expect(await response.text()).not.toContain('upstream-private-details')
+  })
+
+  it.each([301, 302, 303, 307, 308])('GitHubのHTTP %iを追従せず拒否する', async status => {
+    fetchMock.mockResolvedValueOnce(new Response(null, {
+      status,
+      headers: { Location: 'https://untrusted.example/collect' },
+    }))
+    const response = await worker.fetch(post(), env)
+    expect(response.status).toBe(502)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls[0]?.[1]?.redirect).toBe('manual')
+    expect(response.headers.get('Location')).toBeNull()
   })
 
   it('GitHubの壊れたJSONを502にする', async () => {
