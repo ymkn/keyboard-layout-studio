@@ -156,7 +156,7 @@ export default {
       description: 'Login with your GitHub account to save layouts to Gist.',
       loginButton: 'Login with GitHub',
       authenticating: 'Authenticating...',
-      oauthNote: 'Uses GitHub OAuth. Only requests read/write access to Gists.',
+      oauthNote: 'Uses GitHub OAuth with read/write access to Gists only. Credentials are kept only for this tab session.',
       oauthError: 'Failed to start OAuth authentication',
     },
 
@@ -235,6 +235,7 @@ export default {
     listFetchFailed: 'Failed to fetch layout list',
     authenticatedAs: 'Authenticated as {username}',
     authError: 'Authentication error: {error}',
+    authStorageError: 'Failed to save or remove credentials. Please check your browser storage settings.',
     githubAuthError: 'GitHub authentication error: {error}',
     clientIdNotSet: 'VITE_GITHUB_CLIENT_ID is not set',
   },

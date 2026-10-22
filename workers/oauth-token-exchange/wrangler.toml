@@ -5,7 +5,24 @@ name = "kls-oauth-worker"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
+[vars]
+ALLOWED_REDIRECT_URIS = "https://ymkn.github.io/keyboard-layout-studio/"
+
+# namespace_idは同じCloudflareアカウント内の他用途と重複させない
+[[ratelimits]]
+name = "OAUTH_RATE_LIMITER"
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }
+
 # 開発環境
 # デプロイ: npx wrangler deploy --env development
 # Worker名: kls-oauth-worker-development（自動生成）
 [env.development]
+
+[env.development.vars]
+ALLOWED_REDIRECT_URIS = "http://localhost:5173/keyboard-layout-studio/,http://127.0.0.1:5173/keyboard-layout-studio/"
+
+[[env.development.ratelimits]]
+name = "OAUTH_RATE_LIMITER"
+namespace_id = "1002"
+simple = { limit = 20, period = 60 }

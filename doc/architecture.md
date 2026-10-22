@@ -127,6 +127,8 @@ Manages Undo/Redo history.
 
 Manages GitHub authentication and layout source/destination.
 
+Authentication credentials are stored in sessionStorage for the current tab session, not in localStorage. Legacy localStorage credentials are removed on startup without being restored. OAuth uses single-use state validation, a ten-minute authorization session, and PKCE (S256).
+
 **State**: `githubAuth`, `layoutSource`, `layoutGistId`, `layoutGistFileKey`, `saveDestination`
 
 **Getters**: `isLoggedIn`, `username`, `avatarUrl`, `token`

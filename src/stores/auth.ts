@@ -2,7 +2,7 @@
  * 認証ストア
  *
  * GitHub認証情報とレイアウトのソース/保存先を管理
- * GitHub認証情報はLocalStorageに永続化される
+ * GitHub認証情報はタブのセッション内だけ保持する
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
@@ -30,29 +30,48 @@ export const useAuthStore = defineStore('auth', () => {
     githubAuth.value = auth
     try {
       if (auth) {
-        localStorage.setItem(STORAGE_KEYS.GITHUB_AUTH, JSON.stringify(auth))
+        sessionStorage.setItem(STORAGE_KEYS.GITHUB_AUTH, JSON.stringify(auth))
       } else {
-        localStorage.removeItem(STORAGE_KEYS.GITHUB_AUTH)
+        sessionStorage.removeItem(STORAGE_KEYS.GITHUB_AUTH)
       }
     } catch {
-      // localStorage容量不足エラー
-      showToast(i18n.global.t('toast.localStorageError'), 'error', 5000)
+      showToast(i18n.global.t('toast.authStorageError'), 'error', 5000)
     }
   }
 
   function loadGitHubAuth() {
-    const stored = localStorage.getItem(STORAGE_KEYS.GITHUB_AUTH)
-    if (stored) {
-      try {
-        githubAuth.value = JSON.parse(stored)
-      } catch {
-        githubAuth.value = null
+    githubAuth.value = null
+    try {
+      // 旧版の永続トークンは移行せず削除し、再認証を求める
+      localStorage.removeItem(STORAGE_KEYS.GITHUB_AUTH)
+      const stored = sessionStorage.getItem(STORAGE_KEYS.GITHUB_AUTH)
+      if (stored) {
+        const auth: unknown = JSON.parse(stored)
+        if (auth && typeof auth === 'object' &&
+            'token' in auth && typeof auth.token === 'string' && auth.token &&
+            'username' in auth && typeof auth.username === 'string' && auth.username &&
+            (!('avatarUrl' in auth) || typeof auth.avatarUrl === 'string')) {
+          githubAuth.value = {
+            token: auth.token,
+            username: auth.username,
+            avatarUrl: 'avatarUrl' in auth && typeof auth.avatarUrl === 'string' ? auth.avatarUrl : undefined,
+          }
+        } else {
+          sessionStorage.removeItem(STORAGE_KEYS.GITHUB_AUTH)
+        }
       }
+    } catch {
+      githubAuth.value = null
     }
   }
 
   function logoutGitHub() {
     setGitHubAuth(null)
+    try {
+      localStorage.removeItem(STORAGE_KEYS.GITHUB_AUTH)
+    } catch {
+      showToast(i18n.global.t('toast.authStorageError'), 'error', 5000)
+    }
     // Gistから読み込んだレイアウトの場合、ソースをローカルに変更
     if (layoutSource.value === 'gist') {
       clearLayoutSource()

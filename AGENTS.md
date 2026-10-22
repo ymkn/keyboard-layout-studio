@@ -9,11 +9,14 @@ npm run dev
 # Build for production (runs TypeScript typecheck first via vue-tsc)
 npm run build
 
+# Type-check and run OAuth/Worker/auth-storage regression tests
+npm test
+
 # Preview production build
 npm run preview
 ```
 
-**Note**: No lint or test scripts are configured. When adding features, always run `npm run build` to verify TypeScript compilation.
+**Note**: No lint script is configured. When adding features, run `npm run build` (SPA and Worker typechecks) and `npm test` (security regression tests).
 
 ### Cloudflare Worker Commands
 
@@ -38,6 +41,10 @@ See `doc/WORKERS_DEPLOY.md` for detailed deployment instructions.
 **Cloudflare Worker** - Set via `wrangler secret put`:
 - `GITHUB_CLIENT_ID` - GitHub OAuth App client ID
 - `GITHUB_CLIENT_SECRET` - GitHub OAuth App client secret
+
+**Cloudflare Worker** - Set in `wrangler.toml` for each environment:
+- `ALLOWED_REDIRECT_URIS` - Comma-separated exact callback URLs; origins are derived from these URLs
+- `OAUTH_RATE_LIMITER` - Rate Limiting binding (20 attempts per IP per 60 seconds, approximate per Cloudflare location)
 
 **Note**: GitHub integration is optional. If env vars are not set, the feature is disabled gracefully.
 
@@ -210,13 +217,15 @@ workers/
 5. Extract reusable logic to `src/composables/`
 6. Create/edit components with proper imports and typing
 7. Run `npm run build` to verify TypeScript compilation
-8. Test in dev server manually (no automated tests)
+8. Run `npm test` and verify behavior in the dev server as appropriate
 
 ### GitHub Integration Notes
 
 - GitHub API calls use `GitHubService` class in `src/services/github.ts`
 - OAuth flow uses Cloudflare Worker to exchange code for token (CORS workaround)
-- Auth state persisted in localStorage (`kls-github-auth`)
+- Auth state stored in sessionStorage (`kls-github-auth`); legacy localStorage credentials are removed, not migrated
 - OAuth state persisted in sessionStorage during redirect flow
+- OAuth callbacks require single-use state validation and S256 PKCE; Worker redirects must exactly match `ALLOWED_REDIRECT_URIS`
+- Worker rate limiting requires the `OAUTH_RATE_LIMITER` binding; configuration errors fail closed
 - Gist files identified by `.kls.json` extension
 - Error messages localized to Japanese via `getGitHubErrorMessage()`

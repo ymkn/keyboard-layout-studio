@@ -232,7 +232,7 @@ import GitHubUserBadge from './components/GitHubUserBadge.vue'
 import LanguageSelector from './components/LanguageSelector.vue'
 import { useKeyboardStore } from './stores/keyboard'
 import { useToast } from './composables/useToast'
-import { GitHubService, filterKLSGists, getGitHubErrorMessage, exchangeCodeForToken } from './services/github'
+import { GitHubService, filterKLSGists, getGitHubErrorMessage, exchangeCodeForToken, clearOAuthSession } from './services/github'
 import { STORAGE_KEYS } from './constants/storage'
 import type { PresetInfo } from './services/presets'
 import type { KeyboardLayout } from './types/keyboard'
@@ -285,27 +285,18 @@ function handleLayoutChange(event: Event) {
 // OAuthコールバックを処理
 async function handleOAuthCallback(): Promise<void> {
   const urlParams = new URLSearchParams(window.location.search)
-  const code = urlParams.get('code')
-  const error = urlParams.get('error')
-  const errorDescription = urlParams.get('error_description')
-  
-  if (error) {
-    toast.showToast(t('toast.githubAuthError', { error: errorDescription || error }), 'error')
-    window.history.replaceState({}, '', window.location.pathname)
-    return
-  }
+  if (!urlParams.has('code') && !urlParams.has('error')) return
 
-  if (!code) return
-
-  const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID
-  if (!clientId) {
-    toast.showToast(t('toast.clientIdNotSet'), 'error')
-    window.history.replaceState({}, '', window.location.pathname)
-    return
-  }
+  // 通信を待たずにURLから認証情報を除く
+  window.history.replaceState({}, '', window.location.pathname)
 
   try {
-    const { access_token } = await exchangeCodeForToken(code)
+    if (!import.meta.env.VITE_GITHUB_CLIENT_ID) {
+      clearOAuthSession()
+      toast.showToast(t('toast.clientIdNotSet'), 'error')
+      return
+    }
+    const { access_token } = await exchangeCodeForToken(urlParams)
     const service = new GitHubService(access_token)
     const user = await service.validateToken()
 
@@ -318,15 +309,13 @@ async function handleOAuthCallback(): Promise<void> {
     toast.showToast(t('toast.authenticatedAs', { username: user.login }), 'success')
   } catch (error) {
     toast.showToast(t('toast.authError', { error: getGitHubErrorMessage(error) }), 'error')
-  } finally {
-    window.history.replaceState({}, '', window.location.pathname)
   }
 }
 
 // ページロード時に認証情報を復元し、OAuthコールバックを処理
 onMounted(async () => {
-  await handleOAuthCallback()
   store.loadGitHubAuth()
+  await handleOAuthCallback()
 })
 
 function handleGitHubLogout() {

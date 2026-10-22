@@ -156,7 +156,7 @@ export default {
       description: 'GitHubアカウントでログインすると、レイアウトをGistに保存できます。',
       loginButton: 'GitHubでログイン',
       authenticating: '認証中...',
-      oauthNote: 'GitHubのOAuth認証を使用します。Gistの読み書き権限のみをリクエストします。',
+      oauthNote: 'GitHubのOAuth認証を使用し、Gistの読み書き権限のみをリクエストします。認証情報はタブのセッション内だけ保持します。',
       oauthError: 'OAuth認証の開始に失敗しました',
     },
 
@@ -235,6 +235,7 @@ export default {
     listFetchFailed: 'レイアウト一覧の取得に失敗しました',
     authenticatedAs: '{username}として認証されました',
     authError: '認証エラー: {error}',
+    authStorageError: '認証情報の保存・削除に失敗しました。ブラウザのストレージ設定を確認してください。',
     githubAuthError: 'GitHub認証エラー: {error}',
     clientIdNotSet: 'VITE_GITHUB_CLIENT_IDが設定されていません',
   },

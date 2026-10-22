@@ -82,7 +82,7 @@ async function onOAuthLogin() {
 
   try {
     loading.value = true
-    const authUrl = startOAuthFlow(clientId, redirectUri)
+    const authUrl = await startOAuthFlow(clientId, redirectUri)
     window.location.href = authUrl
   } catch (err) {
     error.value = err instanceof Error ? err.message : t('dialogs.githubLogin.oauthError')

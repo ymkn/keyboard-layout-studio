@@ -36,6 +36,9 @@ dist-ssr
 .env.*.local
 .env.development
 .env.production
+.dev.vars
+.dev.vars.*
+.wrangler/
 
 # TypeScript
 *.tsbuildinfo

@@ -35,7 +35,7 @@ https://ymkn.github.io/keyboard-layout-studio/
 
 ### Prerequisites
 
-- Node.js 16+ and npm
+- Node.js 22+ and npm
 
 ### Installation
 
@@ -58,6 +58,9 @@ The app will be available at `http://localhost:5173`
 ```bash
 # Type-check and build
 npm run build
+
+# Type-check and run security regression tests
+npm test
 
 # Preview production build
 npm run preview
@@ -123,4 +126,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Note**: This is a client-side application. All data is stored locally in your browser's LocalStorage. No data is sent to external servers.
+**Note**: Layouts can be stored locally in your browser's LocalStorage. Optional GitHub integration sends authentication requests through a Cloudflare Worker and stores layouts in GitHub Gists. GitHub credentials are kept in sessionStorage for the current tab session, not in LocalStorage. See [Worker deployment and security](doc/WORKERS_DEPLOY.md).
