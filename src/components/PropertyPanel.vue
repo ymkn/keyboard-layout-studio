@@ -127,39 +127,10 @@
       </template>
     </div>
 
-    <div v-else-if="store.selectedKeyIds.length > 1" class="space-y-4">
-      <div class="text-gray-400">
-        <p class="text-sm mb-2">{{ t('propertyPanel.keysSelected', { count: store.selectedKeyIds.length }) }}</p>
-        <p class="text-xs text-gray-500">{{ t('propertyPanel.multiSelectInfo') }}</p>
-        <p class="text-xs text-gray-500 mt-2 whitespace-pre-line">{{ t('propertyPanel.multiSelectHint') }}</p>
-      </div>
-
-      <!-- 回転（複数選択時は全キーへ一括適用） -->
-      <div class="property-section">
-        <h3 class="text-sm font-semibold text-gray-300 mb-2">{{ t('propertyPanel.rotation') }}</h3>
-        <div class="flex items-center gap-2">
-          <button
-            type="button"
-            class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-sm hover:bg-gray-600"
-            @click="store.rotateSelectedKeys(-rotationStep)"
-          >-{{ rotationStep }}°</button>
-          <input
-            type="number"
-            :value="multiRotation ?? ''"
-            :placeholder="t('propertyPanel.multiRotationMixed')"
-            :step="rotationStep"
-            class="flex-1 min-w-0 px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-sm"
-            @change="applyMultiRotation"
-          />
-          <span class="text-gray-400 text-sm">{{ t('propertyPanel.degrees') }}</span>
-          <button
-            type="button"
-            class="px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-sm hover:bg-gray-600"
-            @click="store.rotateSelectedKeys(rotationStep)"
-          >+{{ rotationStep }}°</button>
-        </div>
-        <p class="text-xs text-gray-500 mt-1">{{ t('propertyPanel.rotationHint') }}</p>
-      </div>
+    <div v-else-if="store.selectedKeyIds.length > 1" class="text-gray-400">
+      <p class="text-sm mb-2">{{ t('propertyPanel.keysSelected', { count: store.selectedKeyIds.length }) }}</p>
+      <p class="text-xs text-gray-500">{{ t('propertyPanel.multiSelectInfo') }}</p>
+      <p class="text-xs text-gray-500 mt-2 whitespace-pre-line">{{ t('propertyPanel.multiSelectHint') }}</p>
     </div>
 
     <div v-else-if="store.selectedKey" class="space-y-4">
@@ -485,8 +456,6 @@
 import { ref, computed, nextTick, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useKeyboardStore } from '../stores/keyboard'
-import { APP_CONFIG } from '../constants/app-config'
-import { normalizeRotation } from '../utils/key-sanitizer'
 import { getKeycodeLabel } from '../data/keycodes'
 import { SHAPE_PRESETS } from '../data/shape-presets'
 import type { KeyShape, LegendFont } from '../types/keyboard'
@@ -510,7 +479,6 @@ const props = defineProps<{
 }>()
 
 const store = useKeyboardStore()
-const rotationStep = APP_CONFIG.ROTATION_STEP
 const showKeycodeDialog = ref(false)
 const keycodeSuggestRef = ref<InstanceType<typeof KeycodeSuggest> | null>(null)
 
@@ -677,25 +645,6 @@ function updateHeight(event: Event) {
 
 function updateRotation(event: Event) {
   updateNumericField('rotation', event)
-}
-
-// 複数選択時: 全キーの回転角が一致すればその値、混在していれば null
-const multiRotation = computed<number | null>(() => {
-  const keys = store.selectedKeys
-  if (keys.length === 0) return null
-  const first = keys[0].rotation || 0
-  return keys.every(k => (k.rotation || 0) === first) ? first : null
-})
-
-// 複数選択時: 入力された角度を選択中の全キーへ一括適用する
-function applyMultiRotation(event: Event) {
-  const target = event.target as HTMLInputElement
-  const value = parseFloat(target.value)
-  if (isNaN(value)) {
-    target.value = multiRotation.value === null ? '' : String(multiRotation.value)
-    return
-  }
-  store.setSelectedKeysRotation(normalizeRotation(value))
 }
 
 function updateLegend(position: string, event: Event) {

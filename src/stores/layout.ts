@@ -8,7 +8,7 @@ import { ref, computed } from 'vue'
 import type { Key, KeyboardLayout, LegendFont } from '../types/keyboard'
 import { getPresets } from '../services/presets'
 import { APP_CONFIG } from '../constants/app-config'
-import { normalizeRotation, sanitizeKeyGeometry, sanitizeTextField } from '../utils/key-sanitizer'
+import { sanitizeKeyGeometry, sanitizeTextField } from '../utils/key-sanitizer'
 import { sortKeysByPhysicalPosition } from '../utils/key-order'
 
 /**
@@ -225,27 +225,6 @@ export const useLayoutStore = defineStore('layout', () => {
       }
     }
     if (rotated) {
-      notifyChange()
-    }
-  }
-
-  function setKeysRotation(keyIds: string[], angle: number) {
-    const newRotation = normalizeRotation(angle)
-    let changed = false
-    for (const keyId of keyIds) {
-      const index = layout.value.keys.findIndex(k => k.id === keyId)
-      if (index !== -1) {
-        const key = layout.value.keys[index]
-        if ((key.rotation || 0) !== newRotation) {
-          layout.value.keys[index] = {
-            ...key,
-            rotation: newRotation
-          }
-          changed = true
-        }
-      }
-    }
-    if (changed) {
       notifyChange()
     }
   }
@@ -483,7 +462,6 @@ export const useLayoutStore = defineStore('layout', () => {
     moveKeys,
     resizeKeys,
     rotateKeys,
-    setKeysRotation,
     addKey,
     deleteKeys,
     addKeys,

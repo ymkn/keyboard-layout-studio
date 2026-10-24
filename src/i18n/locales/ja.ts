@@ -50,9 +50,8 @@ export default {
     layoutInfo: 'レイアウト全体の情報',
     selectKeyToEdit: 'キーを選択してプロパティを編集します',
     keysSelected: '{count} 個のキーが選択されています',
-    multiSelectInfo: '複数選択時は回転のみ編集できます。',
+    multiSelectInfo: '複数選択時はプロパティの編集はできません。',
     multiSelectHint: 'カーソルキー: 移動\nShift+カーソルキー: サイズ変更\nR / Shift+R: 回転',
-    multiRotationMixed: '混在',
 
     // メタデータ
     title: 'タイトル',
