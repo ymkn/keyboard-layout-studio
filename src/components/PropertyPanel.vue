@@ -44,6 +44,8 @@
           ></textarea>
         </div>
 
+        <RotationCenterFields />
+
         <!-- レジェンドフォント -->
         <div class="property-section">
           <h3 class="text-sm font-semibold text-gray-300 mb-2">{{ t('propertyPanel.legendFont') }}</h3>
@@ -254,7 +256,7 @@
           />
           <span class="text-gray-400 text-sm">{{ t('propertyPanel.degrees') }}</span>
         </div>
-        <p class="text-xs text-gray-500 mt-1">{{ t('propertyPanel.rotationHint') }}</p>
+        <p class="text-xs text-gray-500 mt-1 whitespace-pre-line">{{ t('propertyPanel.rotationHint') }}</p>
       </div>
 
       <!-- レジェンド -->
@@ -461,6 +463,7 @@ import { SHAPE_PRESETS } from '../data/shape-presets'
 import type { KeyShape, LegendFont } from '../types/keyboard'
 import KeycodePickerDialog from './KeycodePickerDialog.vue'
 import KeycodeSuggest from './KeycodeSuggest.vue'
+import RotationCenterFields from './RotationCenterFields.vue'
 import {
   processNumericField,
   processTextField,

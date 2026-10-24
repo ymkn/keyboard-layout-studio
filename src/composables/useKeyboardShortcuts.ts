@@ -19,6 +19,7 @@ export interface ShortcutCondition {
   ctrl?: boolean
   shift?: boolean
   meta?: boolean
+  alt?: boolean
   /** 選択が必要かどうか */
   requiresSelection?: boolean
 }
@@ -44,6 +45,7 @@ export interface KeyboardActions {
   copySelectedKeys: () => void
   pasteKeys: () => void
   rotateSelectedKeys: (angle: number) => void
+  rotateSelectedKeysAroundCenter: (angle: number) => void
 }
 
 /**
@@ -59,6 +61,7 @@ function matchesCondition(event: KeyboardEvent, condition: ShortcutCondition): b
   const ctrlOrMeta = event.ctrlKey || event.metaKey
   if (condition.ctrl && !ctrlOrMeta) return false
   if (condition.ctrl === false && ctrlOrMeta) return false
+  if (condition.alt !== undefined && condition.alt !== event.altKey) return false
 
   if (condition.shift !== undefined) {
     if (condition.shift && !event.shiftKey) return false
@@ -172,6 +175,18 @@ export function createShortcuts(
     {
       condition: { key: 'r', shift: true, requiresSelection: true },
       handler: () => actions.rotateSelectedKeys(-rotationStep),
+      preventDefault: true
+    },
+
+    // 共通の回転中心を基準に位置と向きを回転（KLEと同じ方向）
+    {
+      condition: { key: 'PageUp', ctrl: false, shift: false, alt: false, requiresSelection: true },
+      handler: () => actions.rotateSelectedKeysAroundCenter(-rotationStep),
+      preventDefault: true
+    },
+    {
+      condition: { key: 'PageDown', ctrl: false, shift: false, alt: false, requiresSelection: true },
+      handler: () => actions.rotateSelectedKeysAroundCenter(rotationStep),
       preventDefault: true
     }
   ]

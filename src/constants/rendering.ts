@@ -8,6 +8,9 @@ export const RENDERING = {
   /** グリッドサイズ（u単位） */
   GRID_SIZE: 0.25,
 
+  /** 回転中心マーカーの半径（px） */
+  ROTATION_CENTER_MARKER_SIZE: 8,
+
   /** キー内部のパディング（px） */
   KEY_PADDING: 4,
 

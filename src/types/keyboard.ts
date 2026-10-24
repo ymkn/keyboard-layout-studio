@@ -61,6 +61,14 @@ export type LegendFont =
   | 'Shippori Mincho'
 
 /**
+ * 選択キーをまとめて回転させる中心座標（u単位）
+ */
+export interface RotationCenter {
+  x: number
+  y: number
+}
+
+/**
  * キーボードレイアウト全体の定義
  */
 export interface KeyboardLayout {
@@ -68,6 +76,7 @@ export interface KeyboardLayout {
   keys: Key[]
   layerCount: number // レイヤー総数（1-16）
   legendFont?: LegendFont // レジェンドのフォント
+  rotationCenter?: RotationCenter
   metadata?: {
     author?: string
     description?: string

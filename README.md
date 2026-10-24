@@ -82,6 +82,8 @@ npm run preview
 
 - **Arrow Keys** - Move selected keys by 0.25u
 - **Shift + Arrow Keys** - Resize selected keys by 0.25u
+- **R / Shift + R** - Rotate each selected key around its own center by +3° / -3°
+- **Page Up / Page Down** - Rotate selected keys together around the layout rotation center by -3° / +3°
 - **Ctrl + C** - Copy selected keys
 - **Ctrl + V** - Paste copied keys
 - **Ctrl + Z** - Undo
@@ -89,6 +91,12 @@ npm run preview
 - **Tab** - Select next key
 - **Delete / Backspace** - Delete selected keys
 - **Shift + Click** - Toggle key selection (multi-select)
+
+### Shared Rotation Center
+
+Deselect all keys, then set **Rotation Center (u)** X/Y in the layout properties. Coordinates are measured from the top-left origin and default to (0, 0). The orange cross marks the rotation center, which is saved with the layout.
+
+Select one or more keys and press **Page Up** (counterclockwise) or **Page Down** (clockwise). Each step rotates both the key positions and orientations by 3°, preserving their relative arrangement. Undo/Redo restores the entire operation. Rotation is cancelled if any resulting key position would exceed the existing coordinate limits (X: 0–50u, Y: 0–20u); keys are not individually clamped or snapped to the grid.
 
 ### Display Modes
 
