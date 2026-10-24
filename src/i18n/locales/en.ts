@@ -50,8 +50,9 @@ export default {
     layoutInfo: 'Layout Information',
     selectKeyToEdit: 'Select a key to edit properties',
     keysSelected: '{count} keys selected',
-    multiSelectInfo: 'Cannot edit properties with multiple selection.',
-    multiSelectHint: 'Arrow keys: Move\nShift+Arrow keys: Resize',
+    multiSelectInfo: 'With multiple keys selected, only rotation can be edited.',
+    multiSelectHint: 'Arrow keys: Move\nShift+Arrow keys: Resize\nR / Shift+R: Rotate',
+    multiRotationMixed: 'Mixed',
 
     // Metadata
     title: 'Title',
