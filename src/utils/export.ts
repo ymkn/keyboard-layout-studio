@@ -19,6 +19,10 @@ interface QMKLayoutKey {
  */
 interface VialKeyMetadata {
   x?: number
+  y?: number
+  r?: number
+  rx?: number
+  ry?: number
   w?: number
   h?: number
   w2?: number
@@ -122,79 +126,33 @@ function convertToQMKLayout(key: Key): QMKLayoutKey {
  * Vialは"row,col"形式の文字列とKLE形式のメタデータを使用
  */
 function convertToVialLayout(keys: Key[]): VialRowElement[][] {
-  // y座標でグループ化して行に分ける
-  const rowMap = new Map<number, Key[]>()
-
-  sortKeysByPhysicalPosition(keys).forEach(key => {
-    const rowKeys = rowMap.get(key.y) || []
-    rowKeys.push(key)
-    rowMap.set(key.y, rowKeys)
-  })
-
-  // y座標でソートして行の配列を作成
-  const sortedRows = Array.from(rowMap.entries())
-    .sort((a, b) => a[0] - b[0])
-    .map(([_, rowKeys]) => rowKeys.sort((a, b) => a.x - b.x))
-
-  // 各行を変換
-  const vialLayout: VialRowElement[][] = []
-
-  sortedRows.forEach(rowKeys => {
-    const row: VialRowElement[] = []
-    let lastX = 0
-
-    rowKeys.forEach(key => {
-      // マトリクス情報が必要
-      if (key.matrix.row === undefined || key.matrix.col === undefined) {
-        return // マトリクス情報がないキーはスキップ
+  return sortKeysByPhysicalPosition(keys)
+    .filter(key => key.matrix.row !== undefined && key.matrix.col !== undefined)
+    .map(key => {
+      // キーごとに独立したKLE行を作り、回転・行間・重なりの状態継承を避ける。
+      // 位置は既に回転移動済みなので、編集用の共通中心ではなくキー自身の中心で描画する。
+      const metadata: VialKeyMetadata = {
+        r: key.rotation || 0,
+        rx: key.x + key.width / 2,
+        ry: key.y + key.height / 2,
+        x: -key.width / 2,
+        y: -key.height / 2
       }
 
-      // x座標の差分を計算（前のキーとの間隔）
-      const xGap = key.x - lastX
-
-      // メタデータオブジェクトを作成（デフォルト値以外のみ）
-      const metadata: VialKeyMetadata = {}
-
-      // ISO Enterなどの特殊形状の場合
       if (key.shape === 'iso-enter') {
-        // ISO Enterは常にx: 0.25を出力（Vial向けの特別対応）
-        metadata.x = 0.25
+        metadata.x = -key.width / 2 + 0.25
         metadata.w = 1.25
         metadata.h = 2
         metadata.w2 = 1.5
         metadata.h2 = 1
         metadata.x2 = -0.25
       } else {
-        // 通常のキーの場合
-        if (xGap > 0) {
-          metadata.x = xGap
-        }
-        if (key.width !== 1) {
-          metadata.w = key.width
-        }
-        if (key.height !== 1) {
-          metadata.h = key.height
-        }
+        if (key.width !== 1) metadata.w = key.width
+        if (key.height !== 1) metadata.h = key.height
       }
 
-      // メタデータがある場合は追加
-      if (Object.keys(metadata).length > 0) {
-        row.push(metadata)
-      }
-
-      // キーのマトリクス位置を"row,col"形式で追加
-      row.push(`${key.matrix.row},${key.matrix.col}`)
-
-      // 次のキーの基準位置を更新
-      lastX = key.x + key.width
+      return [metadata, `${key.matrix.row},${key.matrix.col}`]
     })
-
-    if (row.length > 0) {
-      vialLayout.push(row)
-    }
-  })
-
-  return vialLayout
 }
 
 /**
