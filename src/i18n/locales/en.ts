@@ -51,7 +51,7 @@ export default {
     selectKeyToEdit: 'Select a key to edit properties',
     keysSelected: '{count} keys selected',
     multiSelectInfo: 'Cannot edit properties with multiple selection.',
-    multiSelectHint: 'Arrow keys: Move\nShift+Arrow keys: Resize',
+    multiSelectHint: 'Arrow keys: Move\nShift+Arrow keys: Resize\nR / Shift+R: Rotate',
 
     // Metadata
     title: 'Title',
