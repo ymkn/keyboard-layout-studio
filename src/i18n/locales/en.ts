@@ -43,6 +43,7 @@ export default {
     layer: 'Layer:',
     addLayer: 'Add layer',
     deleteLayer: 'Delete layer',
+    rotationOutOfBounds: 'Rotation cancelled because a key would move outside the coordinate limits. Adjust the key positions or rotation center.',
   },
 
   propertyPanel: {
@@ -51,7 +52,7 @@ export default {
     selectKeyToEdit: 'Select a key to edit properties',
     keysSelected: '{count} keys selected',
     multiSelectInfo: 'Cannot edit properties with multiple selection.',
-    multiSelectHint: 'Arrow keys: Move\nShift+Arrow keys: Resize\nR / Shift+R: Rotate',
+    multiSelectHint: 'Arrow keys: Move\nShift+Arrow keys: Resize\nR / Shift+R: Rotate around each key center\nPgUp / PgDn: Rotate around the shared center (-3° / +3°)\nDeselect all keys to set the rotation center in the layout properties.',
 
     // Metadata
     title: 'Title',
@@ -60,6 +61,9 @@ export default {
     authorPlaceholder: 'e.g., John Doe',
     description: 'Description',
     descriptionPlaceholder: 'e.g., Custom layout for 60% keyboard',
+    rotationCenter: 'Rotation Center (u)',
+    rotationCenterHint: 'Coordinates from the top-left origin (default: X=0, Y=0).\nSelect keys, then PgUp: 3° counterclockwise / PgDn: 3° clockwise.\nRotates the key positions and orientations together.',
+    rotationCenterInvalid: 'Rotation center {axis} must be a finite number between 0 and {max}.',
     legendFont: 'Legend Font',
     fontPreview: 'Preview: ABCDE 12345',
 
@@ -93,7 +97,7 @@ export default {
 
     rotation: 'Rotation',
     degrees: 'deg',
-    rotationHint: 'R: +3° / Shift+R: -3°',
+    rotationHint: 'R: +3° / Shift+R: -3° (each key center)\nPgUp: -3° / PgDn: +3° (shared rotation center)',
 
     legends: 'Legends',
     legendTopLeft: 'Top Left',

@@ -5,11 +5,12 @@
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Key, KeyboardLayout, LegendFont } from '../types/keyboard'
+import type { Key, KeyboardLayout, LegendFont, RotationCenter } from '../types/keyboard'
 import { getPresets } from '../services/presets'
 import { APP_CONFIG } from '../constants/app-config'
 import { sanitizeKeyGeometry, sanitizeTextField } from '../utils/key-sanitizer'
 import { sortKeysByPhysicalPosition } from '../utils/key-order'
+import { rotateKeyAroundPoint, sanitizeRotationCenter } from '../utils/rotation'
 
 /**
  * 旧形式のキーデータ（keycodeフィールドを持つ）
@@ -110,6 +111,7 @@ export function cloneLayout(layout: KeyboardLayout): KeyboardLayout {
     name: layout.name,
     layerCount: layout.layerCount,
     legendFont: layout.legendFont,
+    rotationCenter: layout.rotationCenter ? { ...layout.rotationCenter } : undefined,
     keys: layout.keys.map(key => ({
       ...key,
       legend: { ...key.legend },
@@ -130,6 +132,7 @@ export const useLayoutStore = defineStore('layout', () => {
   const layoutName = computed(() => layout.value.name)
   const legendFont = computed(() => layout.value.legendFont)
   const metadata = computed(() => layout.value.metadata)
+  const rotationCenter = computed(() => sanitizeRotationCenter(layout.value.rotationCenter))
 
   // 履歴保存コールバック（historyストアから設定される）
   let onLayoutChange: (() => void) | null = null
@@ -139,7 +142,7 @@ export const useLayoutStore = defineStore('layout', () => {
   }
 
   function notifyChange() {
-    layout.value.metadata!.modified = new Date().toISOString()
+    layout.value.metadata = { ...layout.value.metadata, modified: new Date().toISOString() }
     if (onLayoutChange) {
       onLayoutChange()
     }
@@ -229,6 +232,34 @@ export const useLayoutStore = defineStore('layout', () => {
     }
   }
 
+  function setRotationCenter(center: RotationCenter) {
+    const sanitized = sanitizeRotationCenter(center)
+    if (rotationCenter.value.x === sanitized.x && rotationCenter.value.y === sanitized.y) return
+    layout.value.rotationCenter = sanitized
+    notifyChange()
+  }
+
+  function rotateKeysAroundCenter(keyIds: string[], deltaAngle: number): boolean {
+    if (!Number.isFinite(deltaAngle)) return false
+    if (deltaAngle % 360 === 0) return true
+
+    const selectedIds = new Set(keyIds)
+    const updates: { index: number; key: Key }[] = []
+    for (const [index, key] of layout.value.keys.entries()) {
+      if (!selectedIds.has(key.id)) continue
+      const rotated = rotateKeyAroundPoint(key, rotationCenter.value, deltaAngle)
+      if (!rotated) return false
+      updates.push({ index, key: rotated })
+    }
+
+    if (updates.length === 0) return true
+    for (const { index, key } of updates) {
+      layout.value.keys[index] = key
+    }
+    notifyChange()
+    return true
+  }
+
   function addKey(x: number = 0, y: number = 0): string {
     const usedIds = new Set(layout.value.keys.map(key => key.id))
     const newId = getUniqueKeyId(String(Date.now()), usedIds, layout.value.keys.length + 1)
@@ -274,6 +305,14 @@ export const useLayoutStore = defineStore('layout', () => {
     }
 
     let hasCorrectedValues = false
+
+    if (clonedLayout.rotationCenter !== undefined) {
+      const center = sanitizeRotationCenter(clonedLayout.rotationCenter)
+      if (clonedLayout.rotationCenter?.x !== center.x || clonedLayout.rotationCenter?.y !== center.y) {
+        hasCorrectedValues = true
+      }
+      clonedLayout.rotationCenter = center
+    }
 
     // メタデータのサニタイズ
     const sanitizedName = sanitizeTextField('layoutName', clonedLayout.name || '')
@@ -456,12 +495,15 @@ export const useLayoutStore = defineStore('layout', () => {
     layoutName,
     legendFont,
     metadata,
+    rotationCenter,
     // Actions
     setOnLayoutChange,
     updateKey,
     moveKeys,
     resizeKeys,
     rotateKeys,
+    setRotationCenter,
+    rotateKeysAroundCenter,
     addKey,
     deleteKeys,
     addKeys,

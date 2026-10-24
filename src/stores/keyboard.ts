@@ -128,6 +128,10 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     layoutStore.rotateKeys(editorStore.selectedKeyIds, deltaAngle)
   }
 
+  function rotateSelectedKeysAroundCenter(deltaAngle: number): boolean {
+    return layoutStore.rotateKeysAroundCenter(editorStore.selectedKeyIds, deltaAngle)
+  }
+
   function addKey() {
     // 選択中のキーがある場合、その右隣に配置
     let x = 0
@@ -312,6 +316,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     moveSelectedKeys,
     resizeSelectedKeys,
     rotateSelectedKeys,
+    rotateSelectedKeysAroundCenter,
     addKey,
     deleteSelectedKeys,
     loadLayout,

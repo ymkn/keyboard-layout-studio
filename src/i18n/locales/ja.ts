@@ -43,6 +43,7 @@ export default {
     layer: 'レイヤー:',
     addLayer: 'レイヤーを追加',
     deleteLayer: 'レイヤーを削除',
+    rotationOutOfBounds: '回転後のキー位置が座標の範囲外になるため、回転を中止しました。キーの位置や回転中心を調整してください。',
   },
 
   propertyPanel: {
@@ -51,7 +52,7 @@ export default {
     selectKeyToEdit: 'キーを選択してプロパティを編集します',
     keysSelected: '{count} 個のキーが選択されています',
     multiSelectInfo: '複数選択時はプロパティの編集はできません。',
-    multiSelectHint: 'カーソルキー: 移動\nShift+カーソルキー: サイズ変更\nR / Shift+R: 回転',
+    multiSelectHint: 'カーソルキー: 移動\nShift+カーソルキー: サイズ変更\nR / Shift+R: 各キーの中心で回転\nPgUp / PgDn: 共通の回転中心で回転（-3° / +3°）\n回転中心は選択解除後、レイアウト全体のプロパティで設定します。',
 
     // メタデータ
     title: 'タイトル',
@@ -60,6 +61,9 @@ export default {
     authorPlaceholder: '例: John Doe',
     description: '説明',
     descriptionPlaceholder: '例: 60%キーボード用のカスタムレイアウト',
+    rotationCenter: '回転中心（u）',
+    rotationCenterHint: '左上の原点からの座標です（初期値: X=0、Y=0）。\nキー選択後、PgUp: 反時計回り3° / PgDn: 時計回り3°。\nキーの位置と向きをまとめて回転します。',
+    rotationCenterInvalid: '回転中心の{axis}座標は0〜{max}の有限の数値で指定してください。',
     legendFont: 'レジェンドフォント',
     fontPreview: 'プレビュー: あいうえお ABCDE 12345',
 
@@ -93,7 +97,7 @@ export default {
 
     rotation: '回転',
     degrees: '度',
-    rotationHint: 'R: +3° / Shift+R: -3°',
+    rotationHint: 'R: +3° / Shift+R: -3°（キー自身の中心）\nPgUp: -3° / PgDn: +3°（共通の回転中心）',
 
     legends: 'レジェンド',
     legendTopLeft: '左上',

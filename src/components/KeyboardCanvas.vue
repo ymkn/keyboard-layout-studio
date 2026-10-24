@@ -221,6 +221,18 @@
           >
             <KeyComponent :key-data="key" :is-selected="store.selectedKeyIds.includes(key.id)" />
           </g>
+
+          <!-- 共通の回転中心（キー選択・撮影画像には干渉しない） -->
+          <g
+            :transform="`translate(${layoutStore.rotationCenter.x * keyUnit}, ${layoutStore.rotationCenter.y * keyUnit})`"
+            stroke="#f59e0b"
+            fill="none"
+            pointer-events="none"
+            aria-hidden="true"
+          >
+            <circle :r="rotationCenterMarkerSize / 2" />
+            <path :d="`M ${-rotationCenterMarkerSize} 0 H ${rotationCenterMarkerSize} M 0 ${-rotationCenterMarkerSize} V ${rotationCenterMarkerSize}`" />
+          </g>
         </g>
 
         <!-- ドラッグ選択の矩形（マージン分オフセット） -->
@@ -250,14 +262,17 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useKeyboardStore } from '../stores/keyboard'
-import KeyComponent from './KeyComponent.vue'
-import ScreenshotDialog from './ScreenshotDialog.vue'
+import { useLayoutStore } from '../stores/layout'
 import { RENDERING } from '../constants/rendering'
 import { useDragSelection } from '../composables/useDragSelection'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
+import { showToast } from '../composables/useToast'
+import KeyComponent from './KeyComponent.vue'
+import ScreenshotDialog from './ScreenshotDialog.vue'
 
 const { t } = useI18n()
 const store = useKeyboardStore()
+const layoutStore = useLayoutStore()
 
 // キーボードショートカット
 const { handleKeyDown } = useKeyboardShortcuts(
@@ -269,7 +284,12 @@ const { handleKeyDown } = useKeyboardShortcuts(
     deleteSelectedKeys: () => store.deleteSelectedKeys(),
     copySelectedKeys: () => store.copySelectedKeys(),
     pasteKeys: () => store.pasteKeys(),
-    rotateSelectedKeys: (angle) => store.rotateSelectedKeys(angle)
+    rotateSelectedKeys: (angle) => store.rotateSelectedKeys(angle),
+    rotateSelectedKeysAroundCenter: (angle) => {
+      if (!store.rotateSelectedKeysAroundCenter(angle)) {
+        showToast(t('canvas.rotationOutOfBounds'), 'error')
+      }
+    }
   },
   () => store.selectedKeyIds.length > 0
 )
@@ -280,6 +300,7 @@ const showScreenshotDialog = ref(false)
 const keyUnit = RENDERING.KEY_UNIT
 const gridSize = RENDERING.GRID_SIZE
 const margin = RENDERING.GRID_SIZE
+const rotationCenterMarkerSize = RENDERING.ROTATION_CENTER_MARKER_SIZE
 
 // ドラッグ選択機能
 const {
@@ -292,12 +313,12 @@ const {
 
 // SVGのサイズを計算（マージンを含む）
 const gridWidth = computed(() => {
-  const maxX = Math.max(...store.keys.map(k => k.x + k.width), 10)
+  const maxX = Math.max(...store.keys.map(k => k.x + k.width), layoutStore.rotationCenter.x, 10)
   return maxX + margin * 2 // 左右のマージン
 })
 
 const gridHeight = computed(() => {
-  const maxY = Math.max(...store.keys.map(k => k.y + k.height), 6)
+  const maxY = Math.max(...store.keys.map(k => k.y + k.height), layoutStore.rotationCenter.y, 6)
   return maxY + margin * 2 // 上下のマージン
 })
 

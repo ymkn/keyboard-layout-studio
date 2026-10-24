@@ -5,7 +5,7 @@
  * 型レベルで明確に区別するための定義を提供します。
  */
 
-import type { Key, KeyboardLayout, LegendFont } from './keyboard'
+import type { Key, KeyboardLayout, LegendFont, RotationCenter } from './keyboard'
 import type { StorageSource, GitHubAuth } from './github'
 
 // ============================================================================
@@ -33,6 +33,7 @@ export interface PersistedLayout {
   keys: Key[]
   layerCount: number
   legendFont?: LegendFont
+  rotationCenter?: RotationCenter
   metadata?: LayoutMetadata
 }
 
@@ -100,6 +101,7 @@ export function extractPersistedLayout(layout: KeyboardLayout): PersistedLayout 
     keys: layout.keys,
     layerCount: layout.layerCount,
     legendFont: layout.legendFont,
+    rotationCenter: layout.rotationCenter ? { ...layout.rotationCenter } : undefined,
     metadata: layout.metadata
   }
 }
