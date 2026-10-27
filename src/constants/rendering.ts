@@ -5,6 +5,9 @@ export const RENDERING = {
   /** 1u = 54px（キーキャップの基準サイズ） */
   KEY_UNIT: 54,
 
+  /** ISO Enterの保存座標から描画左端までのオフセット（u単位） */
+  ISO_ENTER_OFFSET_X: 0.5,
+
   /** グリッドサイズ（u単位） */
   GRID_SIZE: 0.25,
 

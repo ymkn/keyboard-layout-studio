@@ -1,6 +1,7 @@
 import type { KeyboardLayout, Key } from '../types/keyboard'
 import qmkTemplate from '../templates/qmk-keyboard-template.json'
 import vialTemplate from '../templates/vial-template.json'
+import { RENDERING } from '../constants/rendering'
 import { sortKeysByPhysicalPosition } from './key-order'
 
 /**
@@ -124,35 +125,122 @@ function convertToQMKLayout(key: Key): QMKLayoutKey {
 /**
  * KeysをVialのレイアウト形式に変換
  * Vialは"row,col"形式の文字列とKLE形式のメタデータを使用
+ *
+ * 回転キーを含む場合は状態継承を避けるため全キー明示形式とし、
+ * 含まない場合は正規の行形式（プロパティは変化がある場合のみ出力）とする。
  */
 function convertToVialLayout(keys: Key[]): VialRowElement[][] {
-  return sortKeysByPhysicalPosition(keys)
-    .filter(key => key.matrix.row !== undefined && key.matrix.col !== undefined)
-    .map(key => {
-      // キーごとに独立したKLE行を作り、回転・行間・重なりの状態継承を避ける。
-      // 位置は既に回転移動済みなので、編集用の共通中心ではなくキー自身の中心で描画する。
-      const metadata: VialKeyMetadata = {
-        r: key.rotation || 0,
-        rx: key.x + key.width / 2,
-        ry: key.y + key.height / 2,
-        x: -key.width / 2,
-        y: -key.height / 2
-      }
+  const sortedKeys = sortKeysByPhysicalPosition(keys).filter(
+    key => key.matrix.row !== undefined && key.matrix.col !== undefined
+  )
 
-      if (key.shape === 'iso-enter') {
-        metadata.x = -key.width / 2 + 0.25
-        metadata.w = 1.25
-        metadata.h = 2
-        metadata.w2 = 1.5
-        metadata.h2 = 1
-        metadata.x2 = -0.25
-      } else {
-        if (key.width !== 1) metadata.w = key.width
-        if (key.height !== 1) metadata.h = key.height
-      }
+  if (sortedKeys.some(key => key.rotation)) {
+    return convertToVialLayoutExplicit(sortedKeys)
+  }
 
-      return [metadata, `${key.matrix.row},${key.matrix.col}`]
-    })
+  return convertToVialLayoutRows(sortedKeys)
+}
+
+/**
+ * 回転キーを含む場合の変換（従来形式）
+ * キーごとに独立したKLE行を作り、回転・行間・重なりの状態継承を避ける。
+ * 位置は既に回転移動済みなので、編集用の共通中心ではなくキー自身の中心で描画する。
+ */
+function convertToVialLayoutExplicit(sortedKeys: Key[]): VialRowElement[][] {
+  return sortedKeys.map(key => {
+    const metadata: VialKeyMetadata = {
+      r: key.rotation || 0,
+      rx: key.x + key.width / 2,
+      ry: key.y + key.height / 2,
+      x: -key.width / 2,
+      y: -key.height / 2
+    }
+
+    if (key.shape === 'iso-enter') {
+      metadata.x = -key.width / 2 + RENDERING.ISO_ENTER_OFFSET_X + 0.25
+      metadata.w = 1.25
+      metadata.h = 2
+      metadata.w2 = 1.5
+      metadata.h2 = 1
+      metadata.x2 = -0.25
+    } else {
+      if (key.width !== 1) metadata.w = key.width
+      if (key.height !== 1) metadata.h = key.height
+    }
+
+    return [metadata, `${key.matrix.row},${key.matrix.col}`]
+  })
+}
+
+/**
+ * 回転キーを含まない場合の変換（正規の行形式）
+ * 物理行ごとにまとめ、KLEデコーダのカーソルに対する差分だけを出力する。
+ * - x: 前のキー（または行頭）からの間隔がある場合のみ
+ * - y: 行頭のキーで、行間が標準（1u）からずれる場合のみ
+ * - w/h: 標準サイズ（1u）でない場合のみ
+ * - r/rx/ry は出力しない
+ */
+function convertToVialLayoutRows(sortedKeys: Key[]): VialRowElement[][] {
+  const rows: VialRowElement[][] = []
+  let row: VialRowElement[] = []
+  let cursorX = 0
+  let cursorY = 0 // デコーダが行頭で想定するy座標
+  let currentRowY: number | null = null
+
+  const flushRow = () => {
+    if (row.length > 0) {
+      rows.push(row)
+      row = []
+    }
+  }
+
+  for (const key of sortedKeys) {
+    if (currentRowY === null || key.y !== currentRowY) {
+      // 新しい物理行。デコーダは行末でyを1進めるため、差分は行頭で補正する
+      flushRow()
+      currentRowY = key.y
+      cursorX = 0
+    }
+
+    const isRowStart = row.length === 0
+    const metadata: VialKeyMetadata = {}
+
+    if (key.shape === 'iso-enter') {
+      // KLSの描画左端は保存座標より0.5u右。KLEの主矩形（幅1.25）は
+      // さらに0.25u右から始まり、副矩形（幅1.5）が上段の張り出しを表す。
+      const primaryX = key.x + RENDERING.ISO_ENTER_OFFSET_X + 0.25
+      const gap = primaryX - cursorX
+      if (gap !== 0) metadata.x = gap
+      if (isRowStart && key.y !== cursorY) metadata.y = key.y - cursorY
+      metadata.w = 1.25
+      metadata.h = 2
+      metadata.w2 = 1.5
+      metadata.h2 = 1
+      metadata.x2 = -0.25
+
+      if (Object.keys(metadata).length > 0) row.push(metadata)
+      row.push(`${key.matrix.row},${key.matrix.col}`)
+      // デコーダは主矩形の幅だけカーソルを進め、描画右端に一致する。
+      cursorX = primaryX + 1.25
+    } else {
+      const gap = key.x - cursorX
+      if (gap !== 0) metadata.x = gap
+      if (isRowStart && key.y !== cursorY) metadata.y = key.y - cursorY
+      if (key.width !== 1) metadata.w = key.width
+      if (key.height !== 1) metadata.h = key.height
+
+      if (Object.keys(metadata).length > 0) row.push(metadata)
+      row.push(`${key.matrix.row},${key.matrix.col}`)
+      cursorX = key.x + key.width
+    }
+
+    if (isRowStart) {
+      cursorY = key.y + 1
+    }
+  }
+
+  flushRow()
+  return rows
 }
 
 /**
