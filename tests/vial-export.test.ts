@@ -245,3 +245,25 @@ describe('Vialエクスポートの行形式（Issue #7）', () => {
     }
   })
 })
+describe('ISO Enterの正規形（Issue #6）', () => {
+  it('回転なしのISO Enterは相対gapと正規の形状値で出力する', () => {
+    const data = exportLayout(makeLayout([
+      makeKey('0', { x: 13, y: 1 }),
+      makeKey('1', { x: 14, y: 1, width: 1.5, height: 2, shape: 'iso-enter' }),
+      makeKey('2', { x: 13, y: 2 })
+    ]))
+    const rows = data.layouts.keymap
+    // 同じ物理行で通常キーの直後にあるISO Enterのメタデータを取り出す
+    const isoRow = rows.find(row => row.includes('0,1'))!
+    const isoMetadata = isoRow[isoRow.indexOf('0,1') - 1] as Record<string, number>
+    expect(isoMetadata).toEqual({ x: 0.25, w: 1.25, h: 2, w2: 1.5, h2: 1, x2: -0.25 })
+    expect(isoMetadata).not.toHaveProperty('r')
+    expect(isoMetadata).not.toHaveProperty('rx')
+    expect(isoMetadata).not.toHaveProperty('ry')
+
+    const decoded = decodeLayout(data)
+    const iso = decoded.find(key => key.label === '0,1')!
+    expect(iso).toMatchObject({ x: 14.25, y: 1, width: 1.25, height: 2, x2: -0.25, width2: 1.5, height2: 1 })
+    expect(iso.x + iso.x2).toBe(14)
+  })
+})
