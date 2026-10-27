@@ -118,7 +118,7 @@ export function cloneLayout(layout: KeyboardLayout): KeyboardLayout {
     legendFont: layout.legendFont,
     rotationCenter: layout.rotationCenter ? { ...layout.rotationCenter } : undefined,
     layoutOptions: layout.layoutOptions?.map(definition =>
-      typeof definition === 'string' ? definition : [definition[0], [...definition[1]]] as [string, string[]]
+      typeof definition === 'string' ? definition : [...definition]
     ),
     keys: layout.keys.map(key => ({
       ...key,

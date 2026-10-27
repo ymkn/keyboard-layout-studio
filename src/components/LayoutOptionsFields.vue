@@ -61,13 +61,13 @@ const rows = computed<LayoutOptionRow[]>(() =>
   layoutStore.layoutOptions.map(definition =>
     typeof definition === 'string'
       ? { name: definition, choices: '' }
-      : { name: definition[0], choices: definition[1].join(', ') }
+      : { name: definition[0], choices: definition.slice(1).join(', ') }
   )
 )
 
 function toDefinition(row: LayoutOptionRow): LayoutOptionDefinition {
   const choices = row.choices.split(',').map(choice => choice.trim()).filter(choice => choice !== '')
-  return choices.length > 0 ? [row.name, choices] : row.name
+  return choices.length > 0 ? [row.name, ...choices] : row.name
 }
 
 function commit(nextRows: LayoutOptionRow[]) {

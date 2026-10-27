@@ -104,7 +104,7 @@ export function extractPersistedLayout(layout: KeyboardLayout): PersistedLayout 
     legendFont: layout.legendFont,
     rotationCenter: layout.rotationCenter ? { ...layout.rotationCenter } : undefined,
     layoutOptions: layout.layoutOptions?.map(definition =>
-      typeof definition === 'string' ? definition : [definition[0], [...definition[1]]] as [string, string[]]
+      typeof definition === 'string' ? definition : [...definition]
     ),
     metadata: layout.metadata
   }

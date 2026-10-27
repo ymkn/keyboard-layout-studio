@@ -244,11 +244,11 @@ export function sanitizeLayoutOptionDefinitions(value: unknown): LayoutOptionDef
     if (typeof entry === 'string') {
       definitions.push(entry)
     } else if (
-      Array.isArray(entry) && entry.length === 2 &&
-      typeof entry[0] === 'string' &&
-      Array.isArray(entry[1]) && entry[1].every(choice => typeof choice === 'string')
+      Array.isArray(entry) && entry.length > 0 &&
+      entry.every(choice => typeof choice === 'string')
     ) {
-      definitions.push([entry[0], [...entry[1]]])
+      // フラット形式 [見出し, ...選択肢名]。要素が1つだけなら文字列として扱う
+      definitions.push(entry.length === 1 ? entry[0] : [...entry])
     }
   }
 

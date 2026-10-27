@@ -38,10 +38,11 @@ export interface KeyLayoutOption {
 
 /**
  * Vial Layout Options のグループ定義（vial.json の layouts.labels の要素）
- * 文字列のみの場合は選択肢名を持たないグループ、
- * [グループ名, 選択肢名の配列] の場合は選択肢を持つグループを表す。
+ * 文字列の場合はトグル型グループ（choice 0=off / 1=on）、
+ * 配列の場合は [見出し, ...選択肢名] のフラット形式で、先頭が見出し、
+ * 残りが choice 0 からの選択肢名を表す（vial-gui の解釈に準拠）。
  */
-export type LayoutOptionDefinition = string | [string, string[]]
+export type LayoutOptionDefinition = string | string[]
 
 /**
  * キーの定義

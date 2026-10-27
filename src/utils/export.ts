@@ -96,7 +96,7 @@ export function exportToVial(layout: KeyboardLayout): string {
   // Layout Optionsの定義を反映（未定義の場合はlabels自体を出さない）
   if (layout.layoutOptions && layout.layoutOptions.length > 0) {
     vialData.layouts.labels = layout.layoutOptions.map(definition =>
-      typeof definition === 'string' ? definition : [definition[0], [...definition[1]]]
+      typeof definition === 'string' ? definition : [...definition]
     )
   }
 

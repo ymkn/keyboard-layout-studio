@@ -33,11 +33,11 @@ function exportLayout(layout: KeyboardLayout): ExportedVial {
 describe('Vial Layout Optionsの出力（Issue #5）', () => {
   it('labels定義を layouts.labels にそのまま出力する', () => {
     const data = exportLayout(makeLayout([makeKey('0')], {
-      layoutOptions: ['Bootmagic', ['Backspace', ['Split Backspace', 'Full Backspace']]]
+      layoutOptions: ['Bootmagic', ['Backspace', 'Split Backspace', 'Full Backspace']]
     }))
     expect(data.layouts.labels).toEqual([
       'Bootmagic',
-      ['Backspace', ['Split Backspace', 'Full Backspace']]
+      ['Backspace', 'Split Backspace', 'Full Backspace']
     ])
   })
 
@@ -83,10 +83,10 @@ describe('Layout Optionsの永続化とサニタイズ（Issue #5）', () => {
   it('永続化抽出で定義と割り当てが保持される（後方互換）', () => {
     const layout = makeLayout(
       [makeKey('0', { layoutOption: { group: 0, choice: 1 } })],
-      { layoutOptions: [['Space', ['Split', 'Full']]] }
+      { layoutOptions: [['Space', 'Split', 'Full']] }
     )
     const persisted = extractPersistedLayout(layout)
-    expect(persisted.layoutOptions).toEqual([['Space', ['Split', 'Full']]])
+    expect(persisted.layoutOptions).toEqual([['Space', 'Split', 'Full']])
     expect(persisted.keys[0].layoutOption).toEqual({ group: 0, choice: 1 })
 
     // 未使用のレイアウトでは余分な項目が増えない
@@ -101,8 +101,8 @@ describe('Layout Optionsの永続化とサニタイズ（Issue #5）', () => {
     expect(sanitizeKeyLayoutOption({ group: 0.5, choice: 0 })).toBeUndefined()
     expect(sanitizeKeyLayoutOption(undefined)).toBeUndefined()
 
-    expect(sanitizeLayoutOptionDefinitions(['A', ['B', ['x', 'y']]])).toEqual(['A', ['B', ['x', 'y']]])
-    expect(sanitizeLayoutOptionDefinitions([42, ['B', 'not-array']])).toBeUndefined()
+    expect(sanitizeLayoutOptionDefinitions(['A', ['B', 'x', 'y']])).toEqual(['A', ['B', 'x', 'y']])
+    expect(sanitizeLayoutOptionDefinitions([42, ['B', 7]])).toBeUndefined()
     expect(sanitizeLayoutOptionDefinitions(undefined)).toBeUndefined()
     expect(sanitizeLayoutOptionDefinitions([])).toBeUndefined()
   })
