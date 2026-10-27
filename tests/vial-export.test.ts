@@ -156,8 +156,10 @@ describe('Vialエクスポートの座標・回転', () => {
   it.each([0, 30, -45])('ISO Enterの形状と配置を保持する（%s度）', rotation => {
     const key = makeKey('0', { x: 7, y: 3.5, width: 1.5, height: 2, shape: 'iso-enter', rotation })
     const [decoded, following] = decodeLayout(exportLayout(makeLayout([key, makeKey('1', { x: 10, y: 5 })])))
+    // 回転なしの場合は行形式（r/rx/ryなし）になるため、回転中心はデコーダ初期値のまま
+    const expectedCenter = rotation === 0 ? { rx: 0, ry: 0 } : { rx: 7.75, ry: 4.5 }
     expect(decoded).toMatchObject({ x: 7.25, y: 3.5, width: 1.25, height: 2,
-      x2: -0.25, width2: 1.5, height2: 1, rotation, rx: 7.75, ry: 4.5 })
+      x2: -0.25, width2: 1.5, height2: 1, rotation, ...expectedCenter })
     expect(decoded.x + decoded.x2).toBe(key.x)
     expectSameGeometry(following, makeKey('1', { x: 10, y: 5 }))
   })
@@ -188,5 +190,58 @@ describe('Vialエクスポートの座標・回転', () => {
       layouts: { LAYOUT: { layout: { x: number; y: number; matrix: number[] }[] } }
     }
     expect(data.layouts.LAYOUT.layout[0]).toMatchObject({ x: key.x, y: key.y, matrix: [0, 0] })
+  })
+})
+
+describe('Vialエクスポートの行形式（Issue #7）', () => {
+  function rawKeymap(keys: Key[]) {
+    return exportLayout(makeLayout(keys)).layouts.keymap
+  }
+
+  it('回転なしでは r/rx/ry を一切出力しない', () => {
+    const keymap = rawKeymap([
+      makeKey('0', { x: 3.125, y: 2.75, height: 2 }),
+      makeKey('1', { x: 0.25, y: 6.5, width: 2.25 }),
+      makeKey('2', { x: 9.5, y: 6.5 })
+    ])
+    for (const row of keymap) {
+      for (const item of row) {
+        if (typeof item !== 'string') {
+          expect(item).not.toHaveProperty('r')
+          expect(item).not.toHaveProperty('rx')
+          expect(item).not.toHaveProperty('ry')
+        }
+      }
+    }
+  })
+
+  it('連続した標準キーはメタデータなしで物理行にまとめる', () => {
+    const keymap = rawKeymap([
+      makeKey('0'), makeKey('1', { x: 1 }), makeKey('2', { x: 2 }),
+      makeKey('3', { y: 1 }), makeKey('4', { x: 1, y: 1 })
+    ])
+    expect(keymap).toEqual([
+      ['0,0', '0,1', '0,2'],
+      ['0,3', '0,4']
+    ])
+  })
+
+  it('間隔は x、行間は行頭の y、非標準サイズは w/h だけを差分出力する', () => {
+    const keymap = rawKeymap([
+      makeKey('0', { x: 0.5, width: 2 }),
+      makeKey('1', { x: 4, y: 3.5, height: 2 })
+    ])
+    expect(keymap).toEqual([
+      [{ x: 0.5, w: 2 }, '0,0'],
+      [{ x: 4, y: 2.5, h: 2 }, '0,1']
+    ])
+  })
+
+  it('回転キーを含む場合は従来の全キー明示形式を維持する', () => {
+    const keymap = rawKeymap([makeKey('0'), makeKey('1', { x: 2, rotation: 15 })])
+    expect(keymap).toHaveLength(2)
+    for (const row of keymap) {
+      expect(row[0]).toMatchObject({ r: expect.any(Number), rx: expect.any(Number), ry: expect.any(Number) })
+    }
   })
 })
