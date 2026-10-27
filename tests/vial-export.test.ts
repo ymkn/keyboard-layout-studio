@@ -158,9 +158,9 @@ describe('Vialエクスポートの座標・回転', () => {
     const [decoded, following] = decodeLayout(exportLayout(makeLayout([key, makeKey('1', { x: 10, y: 5 })])))
     // 回転なしの場合は行形式（r/rx/ryなし）になるため、回転中心はデコーダ初期値のまま
     const expectedCenter = rotation === 0 ? { rx: 0, ry: 0 } : { rx: 7.75, ry: 4.5 }
-    expect(decoded).toMatchObject({ x: 7.25, y: 3.5, width: 1.25, height: 2,
+    expect(decoded).toMatchObject({ x: 7.75, y: 3.5, width: 1.25, height: 2,
       x2: -0.25, width2: 1.5, height2: 1, rotation, ...expectedCenter })
-    expect(decoded.x + decoded.x2).toBe(key.x)
+    expect(decoded.x + decoded.x2).toBe(key.x + 0.5)
     expectSameGeometry(following, makeKey('1', { x: 10, y: 5 }))
   })
 
@@ -246,6 +246,37 @@ describe('Vialエクスポートの行形式（Issue #7）', () => {
   })
 })
 describe('ISO Enterの正規形（Issue #6）', () => {
+  it.each([0, 30, -45])('KLSで右へ0.5uずらして描画するISO Enterの位置を保持する（%s度）', rotation => {
+    const iso = makeKey('1', { x: 2.5, y: 1, width: 1.5, height: 2, shape: 'iso-enter', rotation })
+    const before = makeKey('0', { x: 2, y: 1 })
+    const after = makeKey('2', { x: 4.5, y: 1 })
+    const decoded = decodeLayout(exportLayout(makeLayout([before, iso, after])))
+    const actual = decoded.find(key => key.label === '0,1')!
+
+    // KLSのSVGは上段がx+0.5u、下段がx+0.75uから始まる。
+    expect(actual.x + actual.x2).toBe(3)
+    expect(actual.x).toBe(3.25)
+    expect(actual.x + actual.width).toBe(4.5)
+    expectSameGeometry(decoded.find(key => key.label === '0,0')!, before)
+    expectSameGeometry(decoded.find(key => key.label === '0,2')!, after)
+
+    const centerX = iso.x + iso.width / 2
+    const centerY = iso.y + iso.height / 2
+    for (const rectangle of [
+      { x: actual.x, width: actual.width, height: actual.height, expectedX: 3.25 },
+      { x: actual.x + actual.x2, width: actual.width2, height: actual.height2, expectedX: 3 }
+    ]) {
+      const actualCorners = corners(rectangle.x, actual.y, rectangle.width, rectangle.height,
+        actual.rotation, actual.rx, actual.ry)
+      const expectedCorners = corners(rectangle.expectedX, iso.y, rectangle.width, rectangle.height,
+        rotation, centerX, centerY)
+      actualCorners.forEach((point, index) => {
+        expect(point.x).toBeCloseTo(expectedCorners[index].x, 10)
+        expect(point.y).toBeCloseTo(expectedCorners[index].y, 10)
+      })
+    }
+  })
+
   it('回転なしのISO Enterは相対gapと正規の形状値で出力する', () => {
     const data = exportLayout(makeLayout([
       makeKey('0', { x: 13, y: 1 }),
@@ -256,14 +287,14 @@ describe('ISO Enterの正規形（Issue #6）', () => {
     // 同じ物理行で通常キーの直後にあるISO Enterのメタデータを取り出す
     const isoRow = rows.find(row => row.includes('0,1'))!
     const isoMetadata = isoRow[isoRow.indexOf('0,1') - 1] as Record<string, number>
-    expect(isoMetadata).toEqual({ x: 0.25, w: 1.25, h: 2, w2: 1.5, h2: 1, x2: -0.25 })
+    expect(isoMetadata).toEqual({ x: 0.75, w: 1.25, h: 2, w2: 1.5, h2: 1, x2: -0.25 })
     expect(isoMetadata).not.toHaveProperty('r')
     expect(isoMetadata).not.toHaveProperty('rx')
     expect(isoMetadata).not.toHaveProperty('ry')
 
     const decoded = decodeLayout(data)
     const iso = decoded.find(key => key.label === '0,1')!
-    expect(iso).toMatchObject({ x: 14.25, y: 1, width: 1.25, height: 2, x2: -0.25, width2: 1.5, height2: 1 })
-    expect(iso.x + iso.x2).toBe(14)
+    expect(iso).toMatchObject({ x: 14.75, y: 1, width: 1.25, height: 2, x2: -0.25, width2: 1.5, height2: 1 })
+    expect(iso.x + iso.x2).toBe(14.5)
   })
 })

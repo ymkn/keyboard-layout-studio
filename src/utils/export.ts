@@ -1,6 +1,7 @@
 import type { KeyboardLayout, Key } from '../types/keyboard'
 import qmkTemplate from '../templates/qmk-keyboard-template.json'
 import vialTemplate from '../templates/vial-template.json'
+import { RENDERING } from '../constants/rendering'
 import { sortKeysByPhysicalPosition } from './key-order'
 
 /**
@@ -156,7 +157,7 @@ function convertToVialLayoutExplicit(sortedKeys: Key[]): VialRowElement[][] {
     }
 
     if (key.shape === 'iso-enter') {
-      metadata.x = -key.width / 2 + 0.25
+      metadata.x = -key.width / 2 + RENDERING.ISO_ENTER_OFFSET_X + 0.25
       metadata.w = 1.25
       metadata.h = 2
       metadata.w2 = 1.5
@@ -205,9 +206,9 @@ function convertToVialLayoutRows(sortedKeys: Key[]): VialRowElement[][] {
     const metadata: VialKeyMetadata = {}
 
     if (key.shape === 'iso-enter') {
-      // ISO Enterは下段矩形の左端がキーのx座標。正規形では上段矩形
-      // （幅1.25）が下段より0.25右から始まるため、その位置を基準にする
-      const primaryX = key.x + 0.25
+      // KLSの描画左端は保存座標より0.5u右。KLEの主矩形（幅1.25）は
+      // さらに0.25u右から始まり、副矩形（幅1.5）が上段の張り出しを表す。
+      const primaryX = key.x + RENDERING.ISO_ENTER_OFFSET_X + 0.25
       const gap = primaryX - cursorX
       if (gap !== 0) metadata.x = gap
       if (isRowStart && key.y !== cursorY) metadata.y = key.y - cursorY
@@ -219,7 +220,7 @@ function convertToVialLayoutRows(sortedKeys: Key[]): VialRowElement[][] {
 
       if (Object.keys(metadata).length > 0) row.push(metadata)
       row.push(`${key.matrix.row},${key.matrix.col}`)
-      // デコーダは主矩形の幅だけカーソルを進める（0.25 + 1.25 = 下段幅1.5と一致）
+      // デコーダは主矩形の幅だけカーソルを進め、描画右端に一致する。
       cursorX = primaryX + 1.25
     } else {
       const gap = key.x - cursorX

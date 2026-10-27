@@ -1,4 +1,5 @@
 import type { KeyShape } from '../types/keyboard'
+import { RENDERING } from '../constants/rendering'
 
 /**
  * 形状プリセットの定義
@@ -81,8 +82,8 @@ export function generateShapePath(
     case 'iso-enter': {
       // ISO Enter: L字型
       // バウンディングボックス: width=1.5u (81px), height=2u (108px)
-      // 基準点: x=0 (上部左上の点), y=0
-      const offset = 27 // 0.5u (元の基準点からのオフセット)
+      // 上部左端は保存座標から0.5u右に描画する
+      const offset = RENDERING.ISO_ENTER_OFFSET_X * RENDERING.KEY_UNIT
       const r = 4 // 角丸半径
 
       // 頂点座標（元の座標 + 0.5u オフセット）
@@ -221,7 +222,7 @@ export function getLegendOffset(
       return {
         centerX: width / 2,
         centerY: height * 0.6,
-        offsetX: 27,  // 0.5u
+        offsetX: RENDERING.ISO_ENTER_OFFSET_X * RENDERING.KEY_UNIT,
         offsetY: 0
       }
 
