@@ -5,10 +5,15 @@
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Key, KeyboardLayout, LegendFont, RotationCenter } from '../types/keyboard'
+import type { Key, KeyboardLayout, LayoutOptionDefinition, LegendFont, RotationCenter } from '../types/keyboard'
 import { getPresets } from '../services/presets'
 import { APP_CONFIG } from '../constants/app-config'
-import { sanitizeKeyGeometry, sanitizeTextField } from '../utils/key-sanitizer'
+import {
+  sanitizeKeyGeometry,
+  sanitizeKeyLayoutOption,
+  sanitizeLayoutOptionDefinitions,
+  sanitizeTextField
+} from '../utils/key-sanitizer'
 import { sortKeysByPhysicalPosition } from '../utils/key-order'
 import { rotateKeyAroundPoint, sanitizeRotationCenter } from '../utils/rotation'
 
@@ -112,11 +117,15 @@ export function cloneLayout(layout: KeyboardLayout): KeyboardLayout {
     layerCount: layout.layerCount,
     legendFont: layout.legendFont,
     rotationCenter: layout.rotationCenter ? { ...layout.rotationCenter } : undefined,
+    layoutOptions: layout.layoutOptions?.map(definition =>
+      typeof definition === 'string' ? definition : [definition[0], [...definition[1]]] as [string, string[]]
+    ),
     keys: layout.keys.map(key => ({
       ...key,
       legend: { ...key.legend },
       matrix: { ...key.matrix },
-      keycodes: { ...key.keycodes }
+      keycodes: { ...key.keycodes },
+      layoutOption: key.layoutOption ? { ...key.layoutOption } : undefined
     })),
     metadata: layout.metadata ? { ...layout.metadata } : undefined
   }
@@ -133,6 +142,7 @@ export const useLayoutStore = defineStore('layout', () => {
   const legendFont = computed(() => layout.value.legendFont)
   const metadata = computed(() => layout.value.metadata)
   const rotationCenter = computed(() => sanitizeRotationCenter(layout.value.rotationCenter))
+  const layoutOptions = computed(() => layout.value.layoutOptions ?? [])
 
   // 履歴保存コールバック（historyストアから設定される）
   let onLayoutChange: (() => void) | null = null
@@ -232,6 +242,13 @@ export const useLayoutStore = defineStore('layout', () => {
     }
   }
 
+  function setLayoutOptions(definitions: LayoutOptionDefinition[]) {
+    const sanitized = sanitizeLayoutOptionDefinitions(definitions)
+    if (JSON.stringify(sanitized) === JSON.stringify(layout.value.layoutOptions)) return
+    layout.value.layoutOptions = sanitized
+    notifyChange()
+  }
+
   function setRotationCenter(center: RotationCenter) {
     const sanitized = sanitizeRotationCenter(center)
     if (rotationCenter.value.x === sanitized.x && rotationCenter.value.y === sanitized.y) return
@@ -314,6 +331,14 @@ export const useLayoutStore = defineStore('layout', () => {
       clonedLayout.rotationCenter = center
     }
 
+    if (clonedLayout.layoutOptions !== undefined) {
+      const definitions = sanitizeLayoutOptionDefinitions(clonedLayout.layoutOptions)
+      if (JSON.stringify(definitions) !== JSON.stringify(clonedLayout.layoutOptions)) {
+        hasCorrectedValues = true
+      }
+      clonedLayout.layoutOptions = definitions
+    }
+
     // メタデータのサニタイズ
     const sanitizedName = sanitizeTextField('layoutName', clonedLayout.name || '')
     if (sanitizedName !== clonedLayout.name) {
@@ -369,7 +394,13 @@ export const useLayoutStore = defineStore('layout', () => {
         hasCorrectedValues = true
       }
 
-      return sanitized
+      // Layout Options割り当てのサニタイズ
+      const layoutOption = sanitizeKeyLayoutOption(sanitized.layoutOption)
+      if (JSON.stringify(layoutOption) !== JSON.stringify(sanitized.layoutOption)) {
+        hasCorrectedValues = true
+      }
+
+      return { ...sanitized, layoutOption }
     })
 
     const uniqueIdResult = ensureUniqueKeyIds(clonedLayout.keys)
@@ -496,6 +527,7 @@ export const useLayoutStore = defineStore('layout', () => {
     legendFont,
     metadata,
     rotationCenter,
+    layoutOptions,
     // Actions
     setOnLayoutChange,
     updateKey,
@@ -503,6 +535,7 @@ export const useLayoutStore = defineStore('layout', () => {
     resizeKeys,
     rotateKeys,
     setRotationCenter,
+    setLayoutOptions,
     rotateKeysAroundCenter,
     addKey,
     deleteKeys,

@@ -46,6 +46,8 @@
 
         <RotationCenterFields />
 
+        <LayoutOptionsFields />
+
         <!-- レジェンドフォント -->
         <div class="property-section">
           <h3 class="text-sm font-semibold text-gray-300 mb-2">{{ t('propertyPanel.legendFont') }}</h3>
@@ -416,6 +418,43 @@
         </div>
       </div>
 
+      <!-- レイアウトオプション割り当て（Vial） -->
+      <div class="property-section">
+        <h3 class="text-sm font-semibold text-gray-300 mb-2">{{ t('propertyPanel.layoutOption') }}</h3>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs text-gray-400">{{ t('propertyPanel.layoutOptionGroup') }}</label>
+            <input
+              type="number"
+              :value="store.selectedKey.layoutOption?.group ?? ''"
+              @change="updateLayoutOption('group', $event)"
+              min="0"
+              step="1"
+              class="w-full px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-sm"
+            />
+          </div>
+          <div>
+            <label class="text-xs text-gray-400">{{ t('propertyPanel.layoutOptionChoice') }}</label>
+            <input
+              type="number"
+              :value="store.selectedKey.layoutOption?.choice ?? ''"
+              @change="updateLayoutOption('choice', $event)"
+              min="0"
+              step="1"
+              class="w-full px-2 py-1 bg-gray-700 text-white rounded border border-gray-600 text-sm"
+            />
+          </div>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">{{ t('propertyPanel.layoutOptionHint') }}</p>
+        <button
+          v-if="store.selectedKey.layoutOption"
+          @click="clearLayoutOption"
+          class="mt-2 px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors text-xs"
+        >
+          {{ t('propertyPanel.layoutOptionClear') }}
+        </button>
+      </div>
+
       <!-- キーコード -->
       <div class="property-section">
         <h3 class="text-sm font-semibold text-gray-300 mb-2">{{ t('propertyPanel.keycode') }}</h3>
@@ -464,6 +503,7 @@ import type { KeyShape, LegendFont } from '../types/keyboard'
 import KeycodePickerDialog from './KeycodePickerDialog.vue'
 import KeycodeSuggest from './KeycodeSuggest.vue'
 import RotationCenterFields from './RotationCenterFields.vue'
+import LayoutOptionsFields from './LayoutOptionsFields.vue'
 import {
   processNumericField,
   processTextField,
@@ -662,6 +702,39 @@ function updateLegend(position: string, event: Event) {
   if (update) {
     store.updateKey(store.selectedKey.id, update)
   }
+}
+
+function updateLayoutOption(field: 'group' | 'choice', event: Event) {
+  if (!store.selectedKey) return
+
+  const input = event.target as HTMLInputElement
+  const rawValue = input.value.trim()
+  const current = store.selectedKey.layoutOption
+  const parsed = rawValue === '' ? null : Number(rawValue)
+
+  if (parsed !== null && (!Number.isInteger(parsed) || parsed < 0)) {
+    input.value = current ? String(current[field]) : ''
+    return
+  }
+
+  // 両方とも空（未割り当て）に戻した場合は割り当て自体を解除する
+  const otherValue = field === 'group' ? current?.choice : current?.group
+  if (parsed === null && otherValue === undefined) {
+    store.updateKey(store.selectedKey.id, { layoutOption: undefined })
+    return
+  }
+
+  store.updateKey(store.selectedKey.id, {
+    layoutOption: {
+      group: field === 'group' ? (parsed ?? 0) : (current?.group ?? 0),
+      choice: field === 'choice' ? (parsed ?? 0) : (current?.choice ?? 0)
+    }
+  })
+}
+
+function clearLayoutOption() {
+  if (!store.selectedKey) return
+  store.updateKey(store.selectedKey.id, { layoutOption: undefined })
 }
 
 function updateMatrix(field: 'row' | 'col', event: Event) {

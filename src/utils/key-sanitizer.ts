@@ -5,7 +5,7 @@
  * PropertyPanelの入力バリデーションとloadLayout時のサニタイズで共通使用されます。
  */
 import { APP_CONFIG } from '../constants/app-config'
-import type { Key } from '../types/keyboard'
+import type { Key, KeyLayoutOption, LayoutOptionDefinition } from '../types/keyboard'
 
 /**
  * 数値を指定範囲にクランプする
@@ -212,4 +212,45 @@ export function getTextFieldErrorMessage(
   constraints: Record<string, TextFieldConstraints> = TEXT_FIELD_CONSTRAINTS
 ): string {
   return constraints[fieldName]?.errorMessage ?? `${fieldName}の値が不正です`
+}
+
+/**
+ * キーのLayout Options割り当てをサニタイズする
+ * グループ・チョイスとも0以上の整数でない場合は未割り当てとして扱う
+ */
+export function sanitizeKeyLayoutOption(value: unknown): KeyLayoutOption | undefined {
+  if (typeof value !== 'object' || value === null) return undefined
+
+  const { group, choice } = value as { group?: unknown; choice?: unknown }
+  if (
+    typeof group !== 'number' || !Number.isInteger(group) || group < 0 ||
+    typeof choice !== 'number' || !Number.isInteger(choice) || choice < 0
+  ) {
+    return undefined
+  }
+
+  return { group, choice }
+}
+
+/**
+ * Layout Optionsのグループ定義（labels）をサニタイズする
+ * 文字列、または [名前, 選択肢名の配列] の要素だけを残す
+ */
+export function sanitizeLayoutOptionDefinitions(value: unknown): LayoutOptionDefinition[] | undefined {
+  if (!Array.isArray(value)) return undefined
+
+  const definitions: LayoutOptionDefinition[] = []
+  for (const entry of value) {
+    if (typeof entry === 'string') {
+      definitions.push(entry)
+    } else if (
+      Array.isArray(entry) && entry.length === 2 &&
+      typeof entry[0] === 'string' &&
+      Array.isArray(entry[1]) && entry[1].every(choice => typeof choice === 'string')
+    ) {
+      definitions.push([entry[0], [...entry[1]]])
+    }
+  }
+
+  return definitions.length > 0 ? definitions : undefined
 }
