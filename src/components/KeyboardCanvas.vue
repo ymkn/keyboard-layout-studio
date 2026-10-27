@@ -215,8 +215,8 @@
           <g
             v-for="key in store.keys"
             :key="key.id"
-            @mousedown.stop="handleKeyMouseDown($event, key.id)"
-            @click.stop="handleKeyClick($event, key.id)"
+            @mousedown="handleKeyMouseDown($event, key.id)"
+            @click.stop="handleKeyClick"
             class="cursor-pointer"
           >
             <KeyComponent :key-data="key" :is-selected="store.selectedKeyIds.includes(key.id)" />
@@ -266,6 +266,7 @@ import { useLayoutStore } from '../stores/layout'
 import { RENDERING } from '../constants/rendering'
 import { useDragSelection } from '../composables/useDragSelection'
 import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
+import { beginKeyPress, resolveKeyPress, type KeyPressSession } from '../utils/mouse-selection'
 import { showToast } from '../composables/useToast'
 import KeyComponent from './KeyComponent.vue'
 import ScreenshotDialog from './ScreenshotDialog.vue'
@@ -328,21 +329,31 @@ const svgHeight = computed(() => gridHeight.value * keyUnit)
 // マージンのピクセル値
 const marginPixels = computed(() => margin * keyUnit)
 
-// キーのマウスダウン（ドラッグ選択を防ぐ）
-function handleKeyMouseDown(_event: MouseEvent, _keyId: string) {
-  // キーをクリックした時はドラッグ選択を開始しない
-  // イベント伝播は既に.stopで止まっている
+// キーのマウスダウンで開始した選択セッション（マウスアップで確定する）
+const pendingKeyPress = ref<KeyPressSession | null>(null)
+
+// キーのマウスダウン（選択はこの時点で即時に行う）
+// 伝播は止めない。SVG側のマウスダウンで矩形選択の追跡も開始し、
+// 閾値を超えてドラッグした場合はそちらの結果で置き換える。
+function handleKeyMouseDown(event: MouseEvent, keyId: string) {
+  if (event.button !== 0) {
+    pendingKeyPress.value = null
+    return
+  }
+
+  const session = beginKeyPress(store.selectedKeyIds, keyId, event.shiftKey)
+  pendingKeyPress.value = session
+
+  // 暫定選択を即時適用する（マウスを離す前のカーソルキー入力に効かせるため）
+  if (session.immediateSelectedIds) {
+    store.selectMultipleKeys(session.immediateSelectedIds)
+  }
 }
 
-// キークリック（Shiftクリックで追加選択）
-function handleKeyClick(event: MouseEvent, keyId: string) {
-  if (event.shiftKey) {
-    // Shiftキーを押しながらクリックで追加/削除
-    store.toggleKeySelection(keyId)
-  } else {
-    // 通常のクリックで単独選択
-    store.selectKey(keyId)
-  }
+// キーのクリックは伝播を止める専用（選択はマウスダウン/アップ側で完結する。
+// ここで選択すると二重にトグルされるため何もしない）
+function handleKeyClick() {
+  // キャンバスのクリック（選択解除）に伝播させない
 }
 
 // キャンバスクリック（選択解除）
@@ -357,8 +368,9 @@ function handleCanvasClick(_event: MouseEvent) {
   store.clearSelection()
 }
 
-// ドラッグ選択開始
+// ドラッグ選択開始（左ボタンのみ）
 function handleMouseDown(event: MouseEvent) {
+  if (event.button !== 0) return
   onDragStart(event, marginPixels.value)
 }
 
@@ -367,7 +379,7 @@ function handleMouseMove(event: MouseEvent) {
   onDragMove(event, marginPixels.value)
 }
 
-// ドラッグ終了
+// ドラッグ終了（キーのマウスダウンで始めた選択もここで確定する）
 function handleMouseUp(_event: MouseEvent) {
   // キーの境界情報を渡す
   const keyBounds = store.keys.map(key => ({
@@ -378,10 +390,31 @@ function handleMouseUp(_event: MouseEvent) {
     height: key.height
   }))
 
-  const selectedIds = onDragEnd(keyBounds)
+  const { selectedIds, dragged } = onDragEnd(keyBounds)
+  const session = pendingKeyPress.value
+  pendingKeyPress.value = null
 
-  // 選択されたキーがあれば適用
-  if (selectedIds.length > 0) {
+  if (session) {
+    // キー上で始めた操作はセッションの解決結果に従う
+    const resolution = resolveKeyPress(session, dragged, selectedIds)
+    switch (resolution.type) {
+      case 'marquee':
+        store.selectMultipleKeys(resolution.selectedIds)
+        break
+      case 'toggle':
+        store.toggleKeySelection(resolution.keyId)
+        break
+      case 'collapse':
+        store.selectKey(resolution.keyId)
+        break
+      case 'keep':
+        break
+    }
+    return
+  }
+
+  // キャンバス上で始めたドラッグは矩形選択の結果をそのまま適用する
+  if (dragged) {
     store.selectMultipleKeys(selectedIds)
   }
 }
