@@ -6,6 +6,9 @@
 import { ref, computed, type Ref, type ComputedRef } from 'vue'
 import { RENDERING } from '../constants/rendering'
 
+/** ドラッグとして成立するまでの移動量（px）。これ以下はクリックとして扱う */
+export const DRAG_ACTIVATION_THRESHOLD_PX = 4
+
 /**
  * 選択矩形の型
  */
@@ -28,12 +31,59 @@ export interface KeyBounds {
 }
 
 /**
+ * ドラッグ終了時の結果
+ */
+export interface DragSelectionResult {
+  /** 矩形と交差したキーのID（ドラッグ不成立時は空） */
+  selectedIds: string[]
+  /** 閾値を超えてドラッグとして成立したかどうか */
+  dragged: boolean
+}
+
+/**
+ * 矩形の大きさがドラッグ成立の閾値を超えたかどうか
+ */
+export function exceedsDragThreshold(width: number, height: number): boolean {
+  return width > DRAG_ACTIVATION_THRESHOLD_PX || height > DRAG_ACTIVATION_THRESHOLD_PX
+}
+
+/**
+ * 選択矩形と交差するキーのIDを返す
+ */
+export function computeMarqueeSelectedIds(
+  rect: SelectionRect,
+  keys: KeyBounds[],
+  keyUnit: number
+): string[] {
+  const selectedIds: string[] = []
+
+  for (const key of keys) {
+    const keyX = key.x * keyUnit
+    const keyY = key.y * keyUnit
+    const keyWidth = key.width * keyUnit
+    const keyHeight = key.height * keyUnit
+
+    // キーが矩形と交差しているかチェック
+    if (
+      keyX < rect.x + rect.width &&
+      keyX + keyWidth > rect.x &&
+      keyY < rect.y + rect.height &&
+      keyY + keyHeight > rect.y
+    ) {
+      selectedIds.push(key.id)
+    }
+  }
+
+  return selectedIds
+}
+
+/**
  * useDragSelectionの戻り値
  */
 export interface UseDragSelectionReturn {
   /** ドラッグ中かどうか */
   isDragging: Ref<boolean>
-  /** 選択矩形（ドラッグ中のみ有効） */
+  /** 選択矩形（ドラッグ成立中のみ有効） */
   selectionRect: ComputedRef<SelectionRect | null>
   /** ドラッグ直後かどうか（クリックイベント抑制用） */
   justFinishedDrag: Ref<boolean>
@@ -41,8 +91,8 @@ export interface UseDragSelectionReturn {
   handleMouseDown: (event: MouseEvent, marginPixels: number) => void
   /** マウスムーブハンドラー */
   handleMouseMove: (event: MouseEvent, marginPixels: number) => void
-  /** マウスアップハンドラー - 選択されたキーのID配列を返す */
-  handleMouseUp: (keys: KeyBounds[]) => string[]
+  /** マウスアップハンドラー - ドラッグ結果を返す */
+  handleMouseUp: (keys: KeyBounds[]) => DragSelectionResult
   /** ドラッグ状態をリセット */
   resetDrag: () => void
 }
@@ -61,8 +111,8 @@ export function useDragSelection(): UseDragSelectionReturn {
   const dragEndY = ref(0)
   const justFinishedDrag = ref(false)
 
-  // 選択矩形のcomputed
-  const selectionRect = computed((): SelectionRect | null => {
+  // 現在の矩形（内部用。閾値判定前のものも含む）
+  const currentRect = computed((): SelectionRect | null => {
     if (!isDragging.value) return null
 
     const x = Math.min(dragStartX.value, dragEndX.value)
@@ -73,14 +123,31 @@ export function useDragSelection(): UseDragSelectionReturn {
     return { x, y, width, height }
   })
 
+  // 選択矩形のcomputed（ドラッグとして成立した場合のみ表示する）
+  const selectionRect = computed((): SelectionRect | null => {
+    const rect = currentRect.value
+    if (!rect || !exceedsDragThreshold(rect.width, rect.height)) return null
+
+    return rect
+  })
+
   /**
    * SVGの座標変換を行う
+   *
+   * キー上の要素からイベントが伝播してきた場合にも対応するため、
+   * currentTargetではなくイベント発生要素に最も近いSVG要素を使う。
    */
   function getSVGCoordinates(
     event: MouseEvent,
     marginPixels: number
   ): { x: number; y: number } | null {
-    const svg = event.currentTarget as SVGSVGElement
+    const target = event.target as Element | null
+    const svg = (target?.closest?.('svg') ?? event.currentTarget) as SVGSVGElement | null
+    if (!svg || typeof svg.getScreenCTM !== 'function') {
+      console.warn('SVG element not available')
+      return null
+    }
+
     const screenCTM = svg.getScreenCTM()
     if (!screenCTM) {
       console.warn('SVG transformation matrix not available')
@@ -127,44 +194,25 @@ export function useDragSelection(): UseDragSelectionReturn {
 
   /**
    * ドラッグ終了
-   * @returns 選択されたキーのID配列
+   * @returns ドラッグとして成立したかと、矩形で選択されたキーのID
    */
-  function handleMouseUp(keys: KeyBounds[]): string[] {
+  function handleMouseUp(keys: KeyBounds[]): DragSelectionResult {
     if (!isDragging.value) {
-      return []
+      return { selectedIds: [], dragged: false }
     }
 
-    const rect = selectionRect.value
-    const selectedIds: string[] = []
-
-    // 最小限の動きがあった場合のみ選択（クリックと区別）
-    if (rect && (rect.width > 1 || rect.height > 1)) {
-      for (const key of keys) {
-        const keyX = key.x * keyUnit
-        const keyY = key.y * keyUnit
-        const keyWidth = key.width * keyUnit
-        const keyHeight = key.height * keyUnit
-
-        // キーが矩形と交差しているかチェック
-        if (
-          keyX < rect.x + rect.width &&
-          keyX + keyWidth > rect.x &&
-          keyY < rect.y + rect.height &&
-          keyY + keyHeight > rect.y
-        ) {
-          selectedIds.push(key.id)
-        }
-      }
-    }
+    const rect = currentRect.value
+    const dragged = rect !== null && exceedsDragThreshold(rect.width, rect.height)
+    const selectedIds = dragged && rect ? computeMarqueeSelectedIds(rect, keys, keyUnit) : []
 
     isDragging.value = false
 
-    // ドラッグ選択が行われた場合、フラグを立てる
-    if (selectedIds.length > 0) {
+    // ドラッグとして成立した場合、後続のクリックイベントを抑制する
+    if (dragged) {
       justFinishedDrag.value = true
     }
 
-    return selectedIds
+    return { selectedIds, dragged }
   }
 
   /**
