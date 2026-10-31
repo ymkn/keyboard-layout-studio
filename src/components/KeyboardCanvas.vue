@@ -1,9 +1,11 @@
 <template>
   <div class="keyboard-canvas-container h-full flex flex-col">
-    <div class="flex gap-2 items-center bg-gray-800 px-4 py-3 border-b border-gray-700">
+    <div class="flex flex-wrap gap-2 items-center bg-gray-800 px-4 py-3 border-b border-gray-700 [&_button]:whitespace-nowrap">
+      <template v-if="!editorStore.layoutOptionPreview">
       <button
         @click="store.addKey()"
-        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors text-sm"
+        :disabled="editorStore.layoutOptionPreview"
+        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors text-sm disabled:opacity-40"
       >
         <i class="fa-solid fa-plus"></i> {{ t('common.addKey') }}
       </button>
@@ -22,10 +24,10 @@
       </button>
       <button
         @click="store.pasteKeys()"
-        :disabled="store.copiedKeys.length === 0 || store.selectedKeyIds.length === 0"
+        :disabled="store.copiedKeys.length === 0"
         :class="[
           'px-4 py-2 rounded transition-colors text-sm',
-          store.copiedKeys.length > 0 && store.selectedKeyIds.length > 0
+          store.copiedKeys.length > 0
             ? 'bg-gray-600 hover:bg-gray-700 text-white'
             : 'bg-gray-800 text-gray-600 cursor-not-allowed'
         ]"
@@ -51,7 +53,7 @@
 
       <button
         @click="store.undo()"
-        :disabled="!store.canUndo"
+        :disabled="!store.canUndo || editorStore.layoutOptionPreview"
         :class="[
           'px-4 py-2 rounded transition-colors text-sm',
           store.canUndo
@@ -64,7 +66,7 @@
       </button>
       <button
         @click="store.redo()"
-        :disabled="!store.canRedo"
+        :disabled="!store.canRedo || editorStore.layoutOptionPreview"
         :class="[
           'px-4 py-2 rounded transition-colors text-sm',
           store.canRedo
@@ -76,6 +78,7 @@
         <i class="fa-solid fa-rotate-right"></i> {{ t('common.redo') }}
       </button>
 
+      </template>
       <div class="flex-1"></div>
 
       <!-- 撮影モードボタン -->
@@ -135,12 +138,13 @@
         </button>
       </div>
 
+      <template v-if="!editorStore.layoutOptionPreview">
       <div class="border-l border-gray-600 h-8 mx-2"></div>
 
       <!-- レイヤー数調整ボタン -->
       <button
         @click="handleDecrementLayer"
-        :disabled="store.layout.layerCount <= 1"
+        :disabled="store.layout.layerCount <= 1 || editorStore.layoutOptionPreview"
         :class="[
           'px-3 py-1 rounded text-sm font-semibold transition-colors',
           store.layout.layerCount > 1
@@ -153,7 +157,7 @@
       </button>
       <button
         @click="store.incrementLayerCount()"
-        :disabled="store.layout.layerCount >= 16"
+        :disabled="store.layout.layerCount >= 16 || editorStore.layoutOptionPreview"
         :class="[
           'px-3 py-1 rounded text-sm font-semibold transition-colors',
           store.layout.layerCount < 16
@@ -164,13 +168,18 @@
       >
         +
       </button>
+      </template>
     </div>
 
+    <LayoutOptionsPreview
+      v-if="editorStore.layoutOptionPreview && editorStore.layoutOptionPreviewMode === 'compare'"
+      class="flex-1 min-h-0 overflow-auto"
+    />
     <div
+      v-else
       ref="containerRef"
       class="flex-1 bg-gray-900 overflow-auto p-4 border border-gray-700 rounded-lg m-4"
       tabindex="0"
-      @keydown="handleKeyDown"
     >
       <svg
         :style="{
@@ -213,8 +222,12 @@
 
           <!-- キーの描画 -->
           <g
-            v-for="key in store.keys"
+            v-for="key in editorStore.renderedKeys"
             :key="key.id"
+            :data-key-id="key.id"
+            :data-editable="editorStore.editableKeyIds.has(key.id)"
+            :opacity="editorStore.layoutOptionPreview || editorStore.editableKeyIds.has(key.id) ? 1 : key.layoutOption ? 0.25 : 0.65"
+            :pointer-events="editorStore.editableKeyIds.has(key.id) ? 'auto' : 'none'"
             @mousedown="handleKeyMouseDown($event, key.id)"
             @click.stop="handleKeyClick"
             class="cursor-pointer"
@@ -263,37 +276,19 @@ import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useKeyboardStore } from '../stores/keyboard'
 import { useLayoutStore } from '../stores/layout'
+import { useEditorStore } from '../stores/editor'
 import { RENDERING } from '../constants/rendering'
 import { useDragSelection } from '../composables/useDragSelection'
-import { useKeyboardShortcuts } from '../composables/useKeyboardShortcuts'
 import { beginKeyPress, resolveKeyPress, type KeyPressSession } from '../utils/mouse-selection'
-import { showToast } from '../composables/useToast'
 import KeyComponent from './KeyComponent.vue'
 import ScreenshotDialog from './ScreenshotDialog.vue'
+import LayoutOptionsPreview from './LayoutOptionsPreview.vue'
 
 const { t } = useI18n()
 const store = useKeyboardStore()
 const layoutStore = useLayoutStore()
+const editorStore = useEditorStore()
 
-// キーボードショートカット
-const { handleKeyDown } = useKeyboardShortcuts(
-  {
-    undo: () => store.undo(),
-    redo: () => store.redo(),
-    moveSelectedKeys: (dx, dy) => store.moveSelectedKeys(dx, dy),
-    resizeSelectedKeys: (dw, dh) => store.resizeSelectedKeys(dw, dh),
-    deleteSelectedKeys: () => store.deleteSelectedKeys(),
-    copySelectedKeys: () => store.copySelectedKeys(),
-    pasteKeys: () => store.pasteKeys(),
-    rotateSelectedKeys: (angle) => store.rotateSelectedKeys(angle),
-    rotateSelectedKeysAroundCenter: (angle) => {
-      if (!store.rotateSelectedKeysAroundCenter(angle)) {
-        showToast(t('canvas.rotationOutOfBounds'), 'error')
-      }
-    }
-  },
-  () => store.selectedKeyIds.length > 0
-)
 const containerRef = ref<HTMLElement | null>(null)
 const showScreenshotDialog = ref(false)
 
@@ -336,6 +331,7 @@ const pendingKeyPress = ref<KeyPressSession | null>(null)
 // 伝播は止めない。SVG側のマウスダウンで矩形選択の追跡も開始し、
 // 閾値を超えてドラッグした場合はそちらの結果で置き換える。
 function handleKeyMouseDown(event: MouseEvent, keyId: string) {
+  if (!editorStore.editableKeyIds.has(keyId)) return
   if (event.button !== 0) {
     pendingKeyPress.value = null
     return
@@ -370,7 +366,7 @@ function handleCanvasClick(_event: MouseEvent) {
 
 // ドラッグ選択開始（左ボタンのみ）
 function handleMouseDown(event: MouseEvent) {
-  if (event.button !== 0) return
+  if (event.button !== 0 || editorStore.layoutOptionPreview) return
   onDragStart(event, marginPixels.value)
 }
 
@@ -382,7 +378,7 @@ function handleMouseMove(event: MouseEvent) {
 // ドラッグ終了（キーのマウスダウンで始めた選択もここで確定する）
 function handleMouseUp(_event: MouseEvent) {
   // キーの境界情報を渡す
-  const keyBounds = store.keys.map(key => ({
+  const keyBounds = editorStore.editableKeys.map(key => ({
     id: key.id,
     x: key.x,
     y: key.y,

@@ -7,6 +7,7 @@ export interface Keycode {
   code: string
   label: string
   description?: string
+  aliases?: string[]
 }
 
 export interface KeycodeCategory {
@@ -117,6 +118,8 @@ export const keycodeCategories: KeycodeCategory[] = [
       { code: 'KC_INT7', label: 'INT7', description: 'International 7' },
       { code: 'KC_INT8', label: 'INT8', description: 'International 8' },
       { code: 'KC_INT9', label: 'INT9', description: 'International 9' },
+      { code: 'KC_LNG1', label: 'ImeOn', description: 'IME On / 日本語入力オン / macOS かな (Keyboard LANG1)', aliases: ['KC_LANGUAGE_1'] },
+      { code: 'KC_LNG2', label: 'ImeOff', description: 'IME Off / 日本語入力オフ / macOS 英数 (Keyboard LANG2)', aliases: ['KC_LANGUAGE_2'] },
     ],
   },
   {
@@ -274,12 +277,16 @@ export const keycodeCategories: KeycodeCategory[] = [
 export function searchKeycodes(query: string): Keycode[] {
   const q = query.toLowerCase().trim()
   if (!q) return []
+  const normalize = (value: string): string => value.replace(/[\s_-]+/g, '')
+  const normalizedQuery = normalize(q)
+  const matches = (value: string): boolean => {
+    const text = value.toLowerCase()
+    return text.includes(q) || (normalizedQuery.length > 0 && normalize(text).includes(normalizedQuery))
+  }
   return keycodeCategories
     .flatMap(category => category.keycodes)
     .filter(keycode =>
-      keycode.code.toLowerCase().includes(q) ||
-      keycode.label.toLowerCase().includes(q) ||
-      (keycode.description?.toLowerCase().includes(q) ?? false)
+      [keycode.code, keycode.label, keycode.description ?? '', ...(keycode.aliases ?? [])].some(matches)
     )
 }
 
@@ -288,7 +295,7 @@ export function searchKeycodes(query: string): Keycode[] {
  */
 export function findKeycode(code: string): Keycode | undefined {
   for (const category of keycodeCategories) {
-    const found = category.keycodes.find(k => k.code === code)
+    const found = category.keycodes.find(k => k.code === code || k.aliases?.includes(code))
     if (found) return found
   }
   return undefined

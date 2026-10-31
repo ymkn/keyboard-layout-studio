@@ -52,9 +52,9 @@ describe('Vial Layout Optionsの出力（Issue #5）', () => {
     expect(vialKeyLabel(makeKey('0', { layoutOption: { group: 2, choice: 1 } }))).toBe('0,0\n\n\n2,1')
   })
 
-  it('keymap内でも割り当てが符号化され、未割り当てキーは従来どおりになる', () => {
+  it.each([0, 30])('keymap内でも割り当てが符号化され、未割り当てキーは従来どおりになる（%s度）', rotation => {
     const data = exportLayout(makeLayout([
-      makeKey('0', { layoutOption: { group: 1, choice: 0 } }),
+      makeKey('0', { layoutOption: { group: 1, choice: 0 }, rotation }),
       makeKey('1', { x: 1 })
     ]))
     const labels = data.layouts.keymap.flat().filter(item => typeof item === 'string')

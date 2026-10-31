@@ -53,3 +53,21 @@ describe('回転ショートカット', () => {
     }
   )
 })
+
+describe('コピー・ペーストのショートカット', () => {
+  it.each([{ ctrlKey: true }, { metaKey: true }])('選択キーがなくても貼り付けを呼べる: %j', modifiers => {
+    const actions = makeActions()
+    const event = makeEvent('v', modifiers)
+    expect(handleKeyboardEvent(event, createShortcuts(actions), false)).toBe(true)
+    expect(actions.pasteKeys).toHaveBeenCalledOnce()
+    expect(event.defaultPrevented).toBe(true)
+  })
+
+  it('選択キーがない場合にコピーは呼ばない', () => {
+    const actions = makeActions()
+    const event = makeEvent('c', { ctrlKey: true })
+    expect(handleKeyboardEvent(event, createShortcuts(actions), false)).toBe(false)
+    expect(actions.copySelectedKeys).not.toHaveBeenCalled()
+    expect(event.defaultPrevented).toBe(false)
+  })
+})

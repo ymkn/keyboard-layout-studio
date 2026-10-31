@@ -154,14 +154,14 @@ export function createShortcuts(
       preventDefault: true
     },
 
-    // コピー/ペースト（選択必要）
+    // コピーは選択が必要。ペーストは空の所属先にも行える。
     {
       condition: { key: 'c', ctrl: true, requiresSelection: true },
       handler: actions.copySelectedKeys,
       preventDefault: true
     },
     {
-      condition: { key: 'v', ctrl: true, requiresSelection: true },
+      condition: { key: 'v', ctrl: true },
       handler: actions.pasteKeys,
       preventDefault: true
     },

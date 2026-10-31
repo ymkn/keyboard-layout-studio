@@ -5,7 +5,7 @@
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Key, KeyboardLayout, LayoutOptionDefinition, LegendFont, RotationCenter } from '../types/keyboard'
+import type { Key, KeyboardLayout, KeyLayoutOption, LayoutOptionDefinition, LegendFont, RotationCenter } from '../types/keyboard'
 import { getPresets } from '../services/presets'
 import { APP_CONFIG } from '../constants/app-config'
 import {
@@ -249,6 +249,61 @@ export const useLayoutStore = defineStore('layout', () => {
     notifyChange()
   }
 
+  function assignKeysToLayoutOption(keyIds: string[], option: KeyLayoutOption | null) {
+    const ids = new Set(keyIds)
+    let changed = false
+    layout.value.keys = layout.value.keys.map(key => {
+      if (!ids.has(key.id)) return key
+      if (key.layoutOption?.group === option?.group && key.layoutOption?.choice === option?.choice) return key
+      changed = true
+      return { ...key, layoutOption: option ? { ...option } : undefined }
+    })
+    if (changed) notifyChange()
+  }
+
+  function duplicateKeysToLayoutOption(keyIds: string[], option: KeyLayoutOption | null): string[] {
+    const keys = getKeysByIds(keyIds)
+    if (keys.length === 0) return []
+    const usedIds = new Set(layout.value.keys.map(key => key.id))
+    const baseTime = Date.now()
+    const duplicates = keys.map((key, index) => {
+      const id = getUniqueKeyId(String(baseTime + index), usedIds, baseTime + index)
+      usedIds.add(id)
+      return {
+        ...key, id, legend: { ...key.legend }, matrix: { ...key.matrix }, keycodes: { ...key.keycodes },
+        layoutOption: option ? { ...option } : undefined
+      }
+    })
+    addKeys(duplicates)
+    return duplicates.map(key => key.id)
+  }
+
+  /** 定義削除時はキーを共通へ戻し、後続の所属番号を一度に補正する。 */
+  function removeLayoutOptionGroup(group: number) {
+    if (layoutOptions.value[group] === undefined) return
+    layout.value.layoutOptions = layoutOptions.value.filter((_, index) => index !== group)
+    layout.value.keys = layout.value.keys.map(key => {
+      const option = key.layoutOption
+      if (!option || option.group < group) return key
+      return { ...key, layoutOption: option.group === group ? undefined : { ...option, group: option.group - 1 } }
+    })
+    notifyChange()
+  }
+
+  function removeLayoutOptionChoice(group: number, choice: number) {
+    const definition = layoutOptions.value[group]
+    if (!Array.isArray(definition) || definition.length <= 3 || choice < 0 || choice >= definition.length - 1) return
+    layout.value.layoutOptions = layoutOptions.value.map((entry, index) =>
+      index === group ? definition.filter((_, item) => item !== choice + 1) : entry
+    )
+    layout.value.keys = layout.value.keys.map(key => {
+      const option = key.layoutOption
+      if (!option || option.group !== group || option.choice < choice) return key
+      return { ...key, layoutOption: option.choice === choice ? undefined : { ...option, choice: option.choice - 1 } }
+    })
+    notifyChange()
+  }
+
   function setRotationCenter(center: RotationCenter) {
     const sanitized = sanitizeRotationCenter(center)
     if (rotationCenter.value.x === sanitized.x && rotationCenter.value.y === sanitized.y) return
@@ -277,7 +332,7 @@ export const useLayoutStore = defineStore('layout', () => {
     return true
   }
 
-  function addKey(x: number = 0, y: number = 0): string {
+  function addKey(x: number = 0, y: number = 0, layoutOption?: KeyLayoutOption): string {
     const usedIds = new Set(layout.value.keys.map(key => key.id))
     const newId = getUniqueKeyId(String(Date.now()), usedIds, layout.value.keys.length + 1)
     const newKey: Key = {
@@ -289,7 +344,8 @@ export const useLayoutStore = defineStore('layout', () => {
       legend: {},
       matrix: {},
       keycodes: {},
-      shape: 'rectangle'
+      shape: 'rectangle',
+      layoutOption: layoutOption ? { ...layoutOption } : undefined
     }
     layout.value.keys.push(newKey)
     notifyChange()
@@ -536,6 +592,10 @@ export const useLayoutStore = defineStore('layout', () => {
     rotateKeys,
     setRotationCenter,
     setLayoutOptions,
+    assignKeysToLayoutOption,
+    duplicateKeysToLayoutOption,
+    removeLayoutOptionGroup,
+    removeLayoutOptionChoice,
     rotateKeysAroundCenter,
     addKey,
     deleteKeys,
