@@ -129,15 +129,12 @@
         <!-- タブコンテンツ -->
         <div class="flex-1 overflow-hidden">
           <!-- レイアウトタブ -->
-          <div v-show="activeTab === 'layout'" class="h-full flex">
+          <div v-show="activeTab === 'layout'" class="h-full flex" @keydown="handleLayoutKeyDown">
             <!-- キャンバスエリア -->
             <div class="flex-1 overflow-auto">
               <KeyboardCanvas />
             </div>
-            <!-- プロパティパネル -->
-            <aside class="w-80 flex-shrink-0 bg-gray-800 border-l border-gray-700 overflow-auto">
-              <PropertyPanel :active-tab="activeTab" />
-            </aside>
+            <EditorSidebar />
           </div>
 
           <!-- JSONタブ -->
@@ -222,7 +219,7 @@
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import KeyboardCanvas from './components/KeyboardCanvas.vue'
-import PropertyPanel from './components/PropertyPanel.vue'
+import EditorSidebar from './components/EditorSidebar.vue'
 import JsonEditor from './components/JsonEditor.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
 import SavedListDialog from './components/SavedListDialog.vue'
@@ -231,8 +228,11 @@ import GitHubLoginDialog from './components/GitHubLoginDialog.vue'
 import GitHubUserBadge from './components/GitHubUserBadge.vue'
 import LanguageSelector from './components/LanguageSelector.vue'
 import { useKeyboardStore } from './stores/keyboard'
+import { useEditorStore } from './stores/editor'
 import { useToast } from './composables/useToast'
+import { useKeyboardShortcuts } from './composables/useKeyboardShortcuts'
 import { GitHubService, filterKLSGists, getGitHubErrorMessage, exchangeCodeForToken, clearOAuthSession } from './services/github'
+import { saveLayoutToGist } from './services/layout-save'
 import { STORAGE_KEYS } from './constants/storage'
 import type { PresetInfo } from './services/presets'
 import type { KeyboardLayout } from './types/keyboard'
@@ -244,6 +244,7 @@ const { t } = useI18n()
 const appVersion = __APP_VERSION__
 
 const store = useKeyboardStore()
+const editorStore = useEditorStore()
 const toast = useToast()
 
 const activeTab = ref<'layout' | 'json'>('layout')
@@ -266,6 +267,29 @@ const pendingLayoutToOpen = ref<SavedLayoutItem | null>(null)
 
 // GitHub認証関連
 const showGitHubLoginDialog = ref(false)
+
+const { handleKeyDown } = useKeyboardShortcuts({
+  undo: () => store.undo(),
+  redo: () => store.redo(),
+  moveSelectedKeys: (dx, dy) => store.moveSelectedKeys(dx, dy),
+  resizeSelectedKeys: (dw, dh) => store.resizeSelectedKeys(dw, dh),
+  deleteSelectedKeys: () => store.deleteSelectedKeys(),
+  copySelectedKeys: () => store.copySelectedKeys(),
+  pasteKeys: () => store.pasteKeys(),
+  rotateSelectedKeys: angle => store.rotateSelectedKeys(angle),
+  rotateSelectedKeysAroundCenter: angle => {
+    if (!store.rotateSelectedKeysAroundCenter(angle)) toast.showToast(t('canvas.rotationOutOfBounds'), 'error')
+  }
+}, () => store.selectedKeyIds.length > 0)
+
+function handleLayoutKeyDown(event: KeyboardEvent) {
+  if (editorStore.layoutOptionPreview || event.isComposing || event.defaultPrevented) return
+  const target = event.target
+  if (target instanceof Element && target.closest(
+    'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="dialog"], [aria-modal="true"], .fixed.inset-0'
+  )) return
+  handleKeyDown(event)
+}
 
 function switchToJsonTab() {
   activeTab.value = 'json'
@@ -524,7 +548,6 @@ async function handleDeleteConfirm() {
 // 保存処理（saveDestinationに応じてローカルまたはGistに保存）
 async function handleSaveLayout() {
   const content = JSON.stringify(store.layout, null, 2)
-  const filename = `${store.layout.name || 'untitled'}.kls.json`
 
   if (store.saveDestination === 'gist') {
     // Gistに保存
@@ -536,25 +559,11 @@ async function handleSaveLayout() {
 
       const service = new GitHubService(store.githubAuth.token)
 
-      if (store.layoutSource === 'gist' && store.layoutGistId) {
-        // 既存のGistを更新
-        const fileKey = store.layoutGistFileKey || filename
-        await service.updateGist(
-          store.layoutGistId,
-          fileKey,
-          content,
-          store.layout.metadata?.description || ''
-        )
-      } else {
-        // 新規Gistを作成
-        const gist = await service.createGist(
-          filename,
-          content,
-          store.layout.metadata?.description || '',
-          false
-        )
-        store.setLayoutSource('gist', gist.id, filename)
-      }
+      const target = store.layoutSource === 'gist' && store.layoutGistId
+        ? { gistId: store.layoutGistId, fileKey: store.layoutGistFileKey }
+        : undefined
+      const saved = await saveLayoutToGist(service, store.layout, target)
+      store.setLayoutSource('gist', saved.gistId, saved.fileKey)
       toast.showToast(t('toast.savedToGist'))
     } catch (error) {
       alert(t('toast.saveFailed', { error: getGitHubErrorMessage(error) }))

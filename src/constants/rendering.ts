@@ -28,3 +28,12 @@ export const RENDERING = {
 } as const
 
 export type RenderingConstants = typeof RENDERING
+
+export const LAYOUT_OPTION_PREVIEW = {
+  PADDING: 0.25,
+  REGION_GAP: 0.25,
+  EMPTY_WIDTH: 4,
+  EMPTY_HEIGHT: 2,
+  MARKER_FONT_SIZE: 10,
+  MARKER_OFFSET: 0.125,
+} as const

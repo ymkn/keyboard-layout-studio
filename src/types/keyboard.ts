@@ -27,6 +27,24 @@ export interface KeyMatrix {
 }
 
 /**
+ * Vial Layout Options におけるキーの割り当て
+ * グループ番号・チョイス番号はいずれも0始まり。
+ * 未割り当て（undefined）のキーは常時表示される。
+ */
+export interface KeyLayoutOption {
+  group: number
+  choice: number
+}
+
+/**
+ * Vial Layout Options のグループ定義（vial.json の layouts.labels の要素）
+ * 文字列の場合はトグル型グループ（choice 0=off / 1=on）、
+ * 配列の場合は [見出し, ...選択肢名] のフラット形式で、先頭が見出し、
+ * 残りが choice 0 からの選択肢名を表す（vial-gui の解釈に準拠）。
+ */
+export type LayoutOptionDefinition = string | string[]
+
+/**
  * キーの定義
  */
 export interface Key {
@@ -40,6 +58,7 @@ export interface Key {
   keycodes?: Record<number, string> // レイヤー番号 → QMKキーコード
   rotation?: number // 回転角度（度）- キーの中心を基準に回転
   shape?: KeyShape // キーの形状（未定義の場合はrectangle）
+  layoutOption?: KeyLayoutOption // Vial Layout Options の割り当て（未定義の場合は常時表示）
 }
 
 /**
@@ -77,6 +96,7 @@ export interface KeyboardLayout {
   layerCount: number // レイヤー総数（1-16）
   legendFont?: LegendFont // レジェンドのフォント
   rotationCenter?: RotationCenter
+  layoutOptions?: LayoutOptionDefinition[] // Vial Layout Options の定義（layouts.labels）
   metadata?: {
     author?: string
     description?: string

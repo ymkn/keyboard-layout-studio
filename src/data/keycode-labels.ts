@@ -22,6 +22,10 @@ export const keycodeLabels: Record<KeyboardLayoutType, Record<string, string>> =
     KC_COMM: ',',
     KC_DOT: '.',
     KC_SLSH: '/',
+    KC_LNG1: 'ImeOn',
+    KC_LNG2: 'ImeOff',
+    KC_LANGUAGE_1: 'ImeOn',
+    KC_LANGUAGE_2: 'ImeOff',
   },
   JIS: {
     // 基本文字キー（JIS）
@@ -42,8 +46,10 @@ export const keycodeLabels: Record<KeyboardLayoutType, Record<string, string>> =
     KC_INT3: '¥',
     KC_INT4: '変換',
     KC_INT5: '無変換',
-    KC_LANG1: '英数',
-    KC_LANG2: 'かな',
+    KC_LNG1: 'ImeOn',
+    KC_LNG2: 'ImeOff',
+    KC_LANGUAGE_1: 'ImeOn',
+    KC_LANGUAGE_2: 'ImeOff',
   },
 }
 

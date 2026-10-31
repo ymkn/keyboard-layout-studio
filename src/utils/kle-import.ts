@@ -1,4 +1,4 @@
-import type { KeyboardLayout, Key, KeyLegend } from '../types/keyboard'
+import type { KeyboardLayout, Key, KeyLayoutOption, KeyLegend } from '../types/keyboard'
 
 /**
  * KLEメタデータの型定義
@@ -137,14 +137,18 @@ export function convertKLEToKLS(kleData: KLEData): KeyboardLayout {
       } else if (typeof element === 'string') {
         // キーラベル - 実際のキーを作成
         // 注: 座標・サイズのサニタイズは loadLayout で行われる
+        // VIA形式のラベルでは4行目がLayout Optionsの割り当てになるため、
+        // レジェンドとは分けて取り込む
+        const layoutOption = parseKLELayoutOption(element)
         const key: Key = {
           id: String(keyIdCounter++),
           x: currentX,
           y: currentY,
           width: keyProps.width,
           height: keyProps.height,
-          legend: parseKLELabel(element),
-          matrix: {}
+          legend: parseKLELabel(layoutOption ? blankKLELabelLine(element, 3) : element),
+          matrix: {},
+          ...(layoutOption ? { layoutOption } : {})
         }
 
         layout.keys.push(key)
@@ -213,4 +217,30 @@ function getDefaultKeyProps() {
     height: 1,
     alignment: 4
   }
+}
+
+/**
+ * VIA形式のKLEラベルからLayout Optionsの割り当てを取り出す
+ * 割り当てはラベルの4行目（インデックス3）に "グループ,チョイス"
+ * （いずれも0始まり）で符号化される。形式に合わない場合はundefined。
+ */
+export function parseKLELayoutOption(label: string): KeyLayoutOption | undefined {
+  const parts = label.split('\n')
+  if (parts.length < 4) return undefined
+
+  const match = /^(\d+),(\d+)$/.exec(parts[3].trim())
+  if (!match) return undefined
+
+  return { group: Number(match[1]), choice: Number(match[2]) }
+}
+
+/**
+ * KLEラベルの指定行を空にする（レジェンド変換から割り当て行を除くため）
+ */
+function blankKLELabelLine(label: string, lineIndex: number): string {
+  const parts = label.split('\n')
+  if (lineIndex < parts.length) {
+    parts[lineIndex] = ''
+  }
+  return parts.join('\n')
 }

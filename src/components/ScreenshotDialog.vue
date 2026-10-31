@@ -29,7 +29,15 @@
 
       <!-- キーボードレイアウト -->
       <div class="bg-gray-900 p-6 overflow-auto">
+        <template v-if="editorStore.layoutOptionPreview && editorStore.layoutOptionPreviewMode === 'compare'">
+          <LayoutOptionsPreview :interactive="false" class="w-[85vw]" />
+          <div v-if="showTitle" class="text-center text-gray-200 mt-4">
+            <p v-if="store.layout.name" class="text-lg font-semibold">{{ store.layout.name }}</p>
+            <p v-if="store.layout.metadata?.author" class="text-sm text-gray-400">by {{ store.layout.metadata.author }}</p>
+          </div>
+        </template>
         <svg
+          v-else
           :width="svgWidth"
           :height="svgHeight"
           :viewBox="`0 0 ${svgWidth} ${svgHeight}`"
@@ -47,7 +55,7 @@
           <!-- コンテンツグループ（パディング分オフセット） -->
           <g :transform="`translate(${paddingPixels}, ${paddingPixels})`">
             <!-- キーの描画 -->
-            <g v-for="key in store.keys" :key="key.id">
+            <g v-for="key in editorStore.visibleKeys" :key="key.id">
               <KeyComponent :key-data="key" :is-selected="false" />
             </g>
           </g>
@@ -91,7 +99,9 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useKeyboardStore } from '../stores/keyboard'
+import { useEditorStore } from '../stores/editor'
 import KeyComponent from './KeyComponent.vue'
+import LayoutOptionsPreview from './LayoutOptionsPreview.vue'
 
 const { t } = useI18n()
 
@@ -105,6 +115,7 @@ defineEmits<{
 }>()
 
 const store = useKeyboardStore()
+const editorStore = useEditorStore()
 const showTitle = ref(false)
 
 const keyUnit = 54
@@ -113,13 +124,13 @@ const titleAreaHeight = 70 // タイトル表示エリアの高さ（px）
 
 // SVGサイズを計算
 const contentWidth = computed(() => {
-  if (store.keys.length === 0) return 10
-  return Math.max(...store.keys.map(k => k.x + k.width))
+  if (editorStore.visibleKeys.length === 0) return 10
+  return Math.max(...editorStore.visibleKeys.map(k => k.x + k.width))
 })
 
 const contentHeight = computed(() => {
-  if (store.keys.length === 0) return 6
-  return Math.max(...store.keys.map(k => k.y + k.height))
+  if (editorStore.visibleKeys.length === 0) return 6
+  return Math.max(...editorStore.visibleKeys.map(k => k.y + k.height))
 })
 
 const keyboardBottomY = computed(() => (contentHeight.value + padding) * keyUnit)

@@ -19,6 +19,7 @@ import { useEditorStore } from './editor'
 import type { KeyboardLayoutType } from './editor'
 import { useHistoryStore } from './history'
 import { useAuthStore } from './auth'
+import { layoutOptionId } from '../utils/layout-options'
 
 // 型のre-export
 export type { DisplayMode, KeyboardLayoutType } from './editor'
@@ -58,6 +59,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
   // 履歴監視をセットアップ
   historyStore.setupLayoutWatcher()
+  if (historyStore.snapshots.length === 0) historyStore.initializeHistory()
 
   // ========================================
   // State（後方互換性のためのプロキシ）
@@ -133,6 +135,8 @@ export const useKeyboardStore = defineStore('keyboard', () => {
   }
 
   function addKey() {
+    if (editorStore.layoutOptionPreview) return
+    editorStore.showActiveLayoutOption()
     // 選択中のキーがある場合、その右隣に配置
     let x = 0
     let y = 0
@@ -142,7 +146,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       y = selected.y
     }
 
-    const newId = layoutStore.addKey(x, y)
+    const newId = layoutStore.addKey(x, y, editorStore.activeLayoutOption ?? undefined)
     editorStore.selectKey(newId)
   }
 
@@ -174,26 +178,30 @@ export const useKeyboardStore = defineStore('keyboard', () => {
   }
 
   function pasteKeys() {
+    if (editorStore.layoutOptionPreview) return
     const copied = editorStore.getCopiedKeys()
     if (copied.length === 0) return
+    editorStore.showActiveLayoutOption()
 
     const newKeyIds: string[] = []
     const baseTime = Date.now()
     const usedIds = new Set(layoutStore.keys.map(key => key.id))
 
-    // 選択中のキーがある場合、最初のキーの右隣を基準に配置
-    let baseX = 0
-    let baseY = 0
+    const minX = Math.min(...copied.map(k => k.x))
+    const minY = Math.min(...copied.map(k => k.y))
+    const sameTarget = copied.every(key =>
+      layoutOptionId(key.layoutOption) === layoutOptionId(editorStore.activeLayoutOption)
+    )
+
+    // 別の所属先へは元の位置を保持し、同じ所属先での複製だけ右隣へ置く。
+    let baseX = minX
+    let baseY = minY
     const selectedKeysList = editorStore.selectedKeys
-    if (selectedKeysList.length > 0) {
+    if (sameTarget && selectedKeysList.length > 0) {
       const firstSelected = selectedKeysList[0]
       baseX = firstSelected.x + firstSelected.width
       baseY = firstSelected.y
     }
-
-    // コピーしたキーの最小座標を取得
-    const minX = Math.min(...copied.map(k => k.x))
-    const minY = Math.min(...copied.map(k => k.y))
 
     const newKeys: Key[] = copied.map((copiedKey, index) => {
       const newId = createUniqueKeyId(String(baseTime + index), usedIds)
@@ -202,7 +210,11 @@ export const useKeyboardStore = defineStore('keyboard', () => {
         ...copiedKey,
         id: newId,
         x: baseX + (copiedKey.x - minX),
-        y: baseY + (copiedKey.y - minY)
+        y: baseY + (copiedKey.y - minY),
+        legend: { ...copiedKey.legend },
+        matrix: { ...copiedKey.matrix },
+        keycodes: { ...copiedKey.keycodes },
+        layoutOption: editorStore.activeLayoutOption ? { ...editorStore.activeLayoutOption } : undefined
       }
     })
 

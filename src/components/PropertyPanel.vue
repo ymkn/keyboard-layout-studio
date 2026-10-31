@@ -1,6 +1,8 @@
 <template>
   <div class="property-panel p-4">
-    <h2 class="text-lg font-bold text-white mb-4">{{ t('propertyPanel.properties') }}</h2>
+    <h2 class="sr-only">{{ t('propertyPanel.properties') }}</h2>
+
+    <LayoutOptionAssignment />
 
     <div v-if="store.selectedKeyIds.length === 0" class="space-y-4">
       <!-- レイアウト画面のみメタデータを表示 -->
@@ -464,6 +466,7 @@ import type { KeyShape, LegendFont } from '../types/keyboard'
 import KeycodePickerDialog from './KeycodePickerDialog.vue'
 import KeycodeSuggest from './KeycodeSuggest.vue'
 import RotationCenterFields from './RotationCenterFields.vue'
+import LayoutOptionAssignment from './LayoutOptionAssignment.vue'
 import {
   processNumericField,
   processTextField,

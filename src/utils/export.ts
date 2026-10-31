@@ -94,7 +94,27 @@ export function exportToVial(layout: KeyboardLayout): string {
   const vialLayout = convertToVialLayout(layout.keys)
   vialData.layouts.keymap = vialLayout
 
+  // Layout Optionsの定義を反映（未定義の場合はlabels自体を出さない）
+  if (layout.layoutOptions && layout.layoutOptions.length > 0) {
+    vialData.layouts.labels = layout.layoutOptions.map(definition =>
+      typeof definition === 'string' ? definition : [...definition]
+    )
+  }
+
   return JSON.stringify(vialData, null, 2)
+}
+
+/**
+ * Vial形式のキーラベルを生成する
+ * Layout Optionsが割り当てられたキーは、物理ラベルの4行目に
+ * "グループ,チョイス"（いずれも0始まり）を符号化する。
+ */
+export function vialKeyLabel(key: Key): string {
+  const base = `${key.matrix.row},${key.matrix.col}`
+  if (!key.layoutOption) {
+    return base
+  }
+  return `${base}\n\n\n${key.layoutOption.group},${key.layoutOption.choice}`
 }
 
 /**
@@ -168,7 +188,7 @@ function convertToVialLayoutExplicit(sortedKeys: Key[]): VialRowElement[][] {
       if (key.height !== 1) metadata.h = key.height
     }
 
-    return [metadata, `${key.matrix.row},${key.matrix.col}`]
+    return [metadata, vialKeyLabel(key)]
   })
 }
 
@@ -219,7 +239,7 @@ function convertToVialLayoutRows(sortedKeys: Key[]): VialRowElement[][] {
       metadata.x2 = -0.25
 
       if (Object.keys(metadata).length > 0) row.push(metadata)
-      row.push(`${key.matrix.row},${key.matrix.col}`)
+      row.push(vialKeyLabel(key))
       // デコーダは主矩形の幅だけカーソルを進め、描画右端に一致する。
       cursorX = primaryX + 1.25
     } else {
@@ -230,7 +250,7 @@ function convertToVialLayoutRows(sortedKeys: Key[]): VialRowElement[][] {
       if (key.height !== 1) metadata.h = key.height
 
       if (Object.keys(metadata).length > 0) row.push(metadata)
-      row.push(`${key.matrix.row},${key.matrix.col}`)
+      row.push(vialKeyLabel(key))
       cursorX = key.x + key.width
     }
 
