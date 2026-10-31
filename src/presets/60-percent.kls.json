@@ -1,6 +1,10 @@
 {
-  "name": "60% Keyboard",
+  "name": "60% Keyboard (Multi Layout)",
   "layerCount": 1,
+  "layoutOptions": [
+    "Split Space",
+    "Split Shift"
+  ],
   "keys": [
     {"id": "1", "x": 0, "y": 0, "width": 1, "height": 1, "legend": {"center": "Esc"}, "matrix": {"row": 0, "col": 0}, "keycodes": {"0": "KC_ESC"}},
     {"id": "2", "x": 1, "y": 0, "width": 1, "height": 1, "legend": {"center": "1"}, "matrix": {"row": 0, "col": 1}, "keycodes": {"0": "KC_1"}},
@@ -54,18 +58,24 @@
     {"id": "50", "x": 9.25, "y": 3, "width": 1, "height": 1, "legend": {"center": ","}, "matrix": {"row": 3, "col": 8}, "keycodes": {"0": "KC_COMM"}},
     {"id": "51", "x": 10.25, "y": 3, "width": 1, "height": 1, "legend": {"center": "."}, "matrix": {"row": 3, "col": 9}, "keycodes": {"0": "KC_DOT"}},
     {"id": "52", "x": 11.25, "y": 3, "width": 1, "height": 1, "legend": {"center": "/"}, "matrix": {"row": 3, "col": 10}, "keycodes": {"0": "KC_SLSH"}},
-    {"id": "53", "x": 12.25, "y": 3, "width": 2.75, "height": 1, "legend": {"center": "Shift"}, "matrix": {"row": 3, "col": 11}, "keycodes": {"0": "KC_RSFT"}},
     {"id": "54", "x": 0, "y": 4, "width": 1.25, "height": 1, "legend": {"center": "Ctrl"}, "matrix": {"row": 4, "col": 0}, "keycodes": {"0": "KC_LCTL"}},
     {"id": "55", "x": 1.25, "y": 4, "width": 1.25, "height": 1, "legend": {"center": "Win"}, "matrix": {"row": 4, "col": 1}, "keycodes": {"0": "KC_LGUI"}},
     {"id": "56", "x": 2.5, "y": 4, "width": 1.25, "height": 1, "legend": {"center": "Alt"}, "matrix": {"row": 4, "col": 2}, "keycodes": {"0": "KC_LALT"}},
-    {"id": "57", "x": 3.75, "y": 4, "width": 6.25, "height": 1, "legend": {"center": "Space"}, "matrix": {"row": 4, "col": 3}, "keycodes": {"0": "KC_SPC"}},
     {"id": "58", "x": 10, "y": 4, "width": 1.25, "height": 1, "legend": {"center": "Alt"}, "matrix": {"row": 4, "col": 4}, "keycodes": {"0": "KC_RALT"}},
     {"id": "59", "x": 11.25, "y": 4, "width": 1.25, "height": 1, "legend": {"center": "Win"}, "matrix": {"row": 4, "col": 5}, "keycodes": {"0": "KC_RGUI"}},
     {"id": "60", "x": 12.5, "y": 4, "width": 1.25, "height": 1, "legend": {"center": "Menu"}, "matrix": {"row": 4, "col": 6}, "keycodes": {"0": "KC_APP"}},
-    {"id": "61", "x": 13.75, "y": 4, "width": 1.25, "height": 1, "legend": {"center": "Ctrl"}, "matrix": {"row": 4, "col": 7}, "keycodes": {"0": "KC_RCTL"}}
+    {"id": "61", "x": 13.75, "y": 4, "width": 1.25, "height": 1, "legend": {"center": "Ctrl"}, "matrix": {"row": 4, "col": 7}, "keycodes": {"0": "KC_RCTL"}},
+    {"id": "1793426031237", "x": 3.75, "y": 4, "width": 6.25, "height": 1, "legend": {"center": "Space"}, "matrix": {"row": 4, "col": 3}, "keycodes": {"0": "KC_SPC"}, "layoutOption": {"group": 0, "choice": 0}},
+    {"id": "1793426043518", "x": 3.75, "y": 4, "width": 1.25, "height": 1, "legend": {"center": "無変換"}, "matrix": {"row": 4, "col": 3}, "keycodes": {"0": "KC_INT5"}, "layoutOption": {"group": 0, "choice": 1}},
+    {"id": "1793426162225", "x": 5, "y": 4, "width": 2.75, "height": 1, "legend": {"center": "Space"}, "matrix": {"row": 4, "col": 8}, "keycodes": {"0": "KC_SPC"}, "layoutOption": {"group": 0, "choice": 1}},
+    {"id": "1793426205918", "x": 7.75, "y": 4, "width": 2.25, "height": 1, "legend": {"center": "変換"}, "matrix": {"row": 4, "col": 9}, "keycodes": {"0": "KC_INT4"}, "layoutOption": {"group": 0, "choice": 1}},
+    {"id": "1793426633143", "x": 12.25, "y": 3, "width": 2.75, "height": 1, "legend": {"center": "Shift"}, "matrix": {"row": 3, "col": 11}, "keycodes": {"0": "KC_RSFT"}, "layoutOption": {"group": 1, "choice": 0}},
+    {"id": "1793426636574", "x": 12.25, "y": 3, "width": 1, "height": 1, "legend": {"center": "\\"}, "matrix": {"row": 3, "col": 11}, "keycodes": {"0": "KC_INT1"}, "layoutOption": {"group": 1, "choice": 1}},
+    {"id": "1793426645736", "x": 13.25, "y": 3, "width": 1.75, "height": 1, "legend": {"center": "Shift"}, "matrix": {"row": 3, "col": 12}, "keycodes": {"0": "KC_RSFT"}, "layoutOption": {"group": 1, "choice": 1}}
   ],
   "metadata": {
     "author": "KLS",
-    "description": "Standard ANSI 60% keyboard layout"
+    "description": "ANSI 60% layout with split Space and right Shift options",
+    "modified": "2026-10-31T07:03:52.198Z"
   }
 }
